@@ -1,0 +1,49 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "rif-runtime-marketplace",
+  "description": "Claude Code plugins for the RIF Runtime: governed AI execution, architecture, governance, evidence, replay, knowledge, security, and release operations.",
+  "version": "1.0.0",
+  "owner": {
+    "name": "canstralian",
+    "url": "https://github.com/canstralian"
+  },
+  "plugins": [
+    {
+      "name": "rif-runtime",
+      "displayName": "RIF Runtime",
+      "description": "A governed Claude Code plugin for engineering, reviewing, operating, and evolving the RIF Runtime.",
+      "version": "1.0.0",
+      "source": "./plugins/rif-runtime",
+      "category": "development",
+      "tags": [
+        "rif-runtime",
+        "governance",
+        "ai-agents",
+        "architecture",
+        "security",
+        "observability",
+        "evidence",
+        "replay",
+        "documentation",
+        "release-management"
+      ],
+      "keywords": [
+        "RIF",
+        "runtime",
+        "governance",
+        "AI agents",
+        "architecture",
+        "security",
+        "observability",
+        "replay"
+      ],
+      "homepage": "https://github.com/canstralian/rif-runtime",
+      "repository": "https://github.com/canstralian/rif-runtime",
+      "license": "MIT",
+      "author": {
+        "name": "canstralian",
+        "url": "https://github.com/canstralian"
+      }
+    }
+  ]
+}
