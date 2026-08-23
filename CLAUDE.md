@@ -219,17 +219,27 @@ surface. Don't claim broader validation than that.
 
 ## Versioning
 
-Marketplace and plugin both sit at `1.0.0`. Three places must be kept
-consistent:
+Marketplace and plugin both sit at `1.0.0` today, but they are **two distinct
+version identities** spread over three fields. Do not treat them as three
+copies of one number.
+
+**Plugin version** — one value, duplicated in two fields that must always match:
+
+- `plugins/rif-runtime/.claude-plugin/plugin.json` → `version`
+- `.claude-plugin/marketplace.json` → `plugins[0].version`
+
+Bump it whenever the plugin's distributable behavior changes (skill added,
+removed, or materially rewritten). Updating one field and not the other leaves
+the catalog advertising a version the plugin manifest does not claim.
+
+**Marketplace version** — the catalog's own version, independent of the plugin:
 
 - `.claude-plugin/marketplace.json` → top-level `version`
-- `.claude-plugin/marketplace.json` → `plugins[0].version`
-- `plugins/rif-runtime/.claude-plugin/plugin.json` → `version`
 
-The plugin version in the marketplace entry and in the plugin manifest are
-separate fields that duplicate the same value — update both. Bump the plugin
-version whenever distributable behavior changes (skill added, removed, or
-materially rewritten).
+Bump it when the catalog itself changes (a plugin added or removed, marketplace
+metadata reworked). Adding a skill to an existing plugin does not by itself
+require a marketplace bump. The two identities sharing `1.0.0` right now is a
+coincidence of a single-plugin catalog, not a constraint.
 
 Owner/repo metadata is likewise duplicated across both manifests
 (`canstralian`, `https://github.com/canstralian/rif-runtime`, MIT). Change it in
