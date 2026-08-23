@@ -334,10 +334,11 @@ def check_prompt_ir(doc: Any, report: Report, prefix: str = "") -> None:
                 "INV-REASON-2",
                 f"{where}.reasoning.effort {effort!r} exceeds budget.max_effort {max_effort!r}",
             )
-    if budget.get("max_tool_calls") == 0 and tool_policy == "allowed":
+    if budget.get("max_tool_calls") == 0 and tool_policy in ("allowed", "constrained"):
         report.error(
             "INV-REASON-2",
-            f"{where}.reasoning.tools.policy is 'allowed' but budget.max_tool_calls is 0",
+            f"{where}.reasoning.tools.policy is {tool_policy!r} — which still permits tool "
+            "calls — but budget.max_tool_calls is 0",
         )
 
     # Reference profile deviation (advisory, docs/PROMPT-IR.md §6).
@@ -397,6 +398,38 @@ def check_prompt_ir(doc: Any, report: Report, prefix: str = "") -> None:
             )
     else:
         report.warn("INV-COMPILE-1", f"{where}: no canonical_hash — the build is not replay-verifiable")
+
+
+def _rank_index(instruction: dict) -> int:
+    """Lower index is higher authority; unknown ranks sort last."""
+    return RANK_ORDER.get(instruction.get("authority"), len(AUTHORITY_RANKS))
+
+
+def _check_resolution_order(report: Report, at: str, loser: dict, winner: dict) -> None:
+    """A suppressed instruction must not outrank the one that superseded it."""
+    loser_rank = _rank_index(loser)
+    winner_rank = _rank_index(winner)
+    if winner_rank > loser_rank:
+        report.error(
+            "INV-AUTH-2",
+            f"{at}: {loser['id']!r} ({loser.get('authority')}) was suppressed in favour of "
+            f"{winner['id']!r} ({winner.get('authority')}) — the lower-authority instruction won",
+        )
+        return
+    if winner_rank == loser_rank:
+        loser_priority = loser.get("priority")
+        winner_priority = winner.get("priority")
+        if (
+            isinstance(loser_priority, int)
+            and isinstance(winner_priority, int)
+            and winner_priority < loser_priority
+        ):
+            report.error(
+                "INV-AUTH-3",
+                f"{at}: {loser['id']!r} (priority {loser_priority}) was suppressed in favour of "
+                f"{winner['id']!r} (priority {winner_priority}) at equal rank — the lower "
+                "priority won",
+            )
 
 
 def check_prompt_build(doc: dict, report: Report) -> None:
@@ -477,6 +510,14 @@ def check_prompt_build(doc: dict, report: Report) -> None:
                 "INV-BUILD-2",
                 f"{at}: superseded_by {winner!r} is not an admitted instruction",
             )
+
+        # INV-AUTH-2/3: a resolution log that records a winner is not evidence that the
+        # winner was entitled to win. Check the ranks.
+        losers_conflicts = [other for other in conflicts if other in admitted]
+        for other in dict.fromkeys(([winner] if winner else []) + losers_conflicts):
+            if other not in by_id or ident not in by_id:
+                continue
+            _check_resolution_order(report, at, by_id[ident], by_id[other])
 
     # INV-BUILD-3: promotion is attributed to an entitled authority.
     for index, entry in enumerate(resolution.get("promoted") or []):

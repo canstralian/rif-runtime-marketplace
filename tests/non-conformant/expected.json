@@ -64,5 +64,23 @@
       "INV-REASON-3"
     ],
     "note": "Build declares verification.mode 'required' but records no verification."
+  },
+  "inverted-authority-resolution.build.json": {
+    "expect": [
+      "INV-AUTH-2"
+    ],
+    "note": "A developer-rank evidence contract was suppressed in favour of a user-rank preference; the log is well-formed but the wrong instruction won."
+  },
+  "inverted-priority-resolution.build.json": {
+    "expect": [
+      "INV-AUTH-3"
+    ],
+    "note": "At equal developer rank, priority 100 was suppressed in favour of priority 80."
+  },
+  "constrained-tools-zero-budget.json": {
+    "expect": [
+      "INV-REASON-2"
+    ],
+    "note": "Tool policy 'constrained' permits an allow-list while the budget funds zero tool calls."
   }
 }
