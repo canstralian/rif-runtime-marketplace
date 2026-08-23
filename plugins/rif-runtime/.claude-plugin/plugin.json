@@ -1,7 +1,7 @@
 {
   "name": "rif-runtime",
-  "description": "Governed Claude Code capabilities for the RIF Runtime architecture and execution model.",
-  "version": "1.0.0",
+  "description": "Governed Claude Code capabilities for the RIF Runtime architecture, execution model, and PromptIR prompt-compilation layer.",
+  "version": "1.1.0",
   "author": {
     "name": "canstralian",
     "url": "https://github.com/canstralian"
@@ -16,6 +16,9 @@
     "AI agents",
     "architecture",
     "evidence",
-    "replay"
+    "replay",
+    "promptir",
+    "prompt-compilation",
+    "provenance"
   ]
 }

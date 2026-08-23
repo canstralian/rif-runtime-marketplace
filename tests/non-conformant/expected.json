@@ -1,0 +1,68 @@
+{
+  "context-carries-authority.json": {
+    "expect": [
+      "INV-CTX-2"
+    ],
+    "note": "Retrieved document asserts developer authority. This is the shape a successful prompt injection takes."
+  },
+  "instruction-hash-drift.json": {
+    "expect": [
+      "INV-PROV-2"
+    ],
+    "note": "Instruction text no longer matches its recorded hash; policy wording drifted between build and replay."
+  },
+  "undeclared-authority.json": {
+    "expect": [
+      "INV-PROV-3"
+    ],
+    "note": "Instruction cites a source absent from authority[]; the artifact cannot say who was entitled to issue it."
+  },
+  "authority-rank-escalation.json": {
+    "expect": [
+      "INV-AUTH-1"
+    ],
+    "note": "User-rank task instruction claims developer rank, which would let it win against the evidence contract."
+  },
+  "unjustified-effort.json": {
+    "expect": [
+      "INV-REASON-1"
+    ],
+    "note": "High effort was allocated without referencing the policy or mode that funded it."
+  },
+  "effort-exceeds-budget.json": {
+    "expect": [
+      "INV-REASON-2"
+    ],
+    "note": "Reasoning effort exceeds the declared budget envelope."
+  },
+  "canonical-hash-drift.json": {
+    "expect": [
+      "INV-COMPILE-1"
+    ],
+    "note": "Declared canonical hash does not reproduce the document; the build is not replay-verifiable."
+  },
+  "lost-instruction.build.json": {
+    "expect": [
+      "INV-BUILD-1"
+    ],
+    "note": "Compiler dropped an instruction without recording it as suppressed."
+  },
+  "silent-suppression.build.json": {
+    "expect": [
+      "INV-BUILD-2"
+    ],
+    "note": "A conflicting instruction was suppressed without naming the winner."
+  },
+  "unattributed-promotion.build.json": {
+    "expect": [
+      "INV-BUILD-3"
+    ],
+    "note": "Context was promoted to instruction rank on user authority; only system or developer may admit a promotion."
+  },
+  "missing-required-verification.build.json": {
+    "expect": [
+      "INV-REASON-3"
+    ],
+    "note": "Build declares verification.mode 'required' but records no verification."
+  }
+}
