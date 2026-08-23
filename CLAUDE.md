@@ -155,6 +155,14 @@ description: Review RIF Runtime architecture for structural integrity, boundarie
 single sentence stating the capability and its decision boundary — it names a
 capability, never a model, provider, or implementation detail.
 
+Note the apparent conflict with `SKILL-CONTRACT.md` §1, which lists `name`,
+`description`, `version`, and `scope` as things a skill must declare. The
+contract's own reference template resolves it: frontmatter carries `name` and
+`description`, `scope` is declared in the body as `## Scope boundary`, and
+`version` is qualified "when versioning is introduced" — which has not happened
+yet. All ten current skills carry exactly two frontmatter keys. Follow the
+reference template, not a literal reading of §1.
+
 **Directory naming.** Lowercase kebab-case; directory name, frontmatter `name`,
 and the invocation `/rif-runtime:<name>` are always the same string.
 
@@ -179,8 +187,11 @@ that way — there is no `requirements.txt`, no lockfile, and nothing to install
    declared boundary.
 4. Add the `/rif-runtime:<skill-name>` line to the README's skill list and the
    directory to the README's tree.
-5. Bump `version` in `plugins/rif-runtime/.claude-plugin/plugin.json` — a new
-   skill changes distributable behavior.
+5. Bump the plugin version — a new skill changes distributable behavior. This
+   value lives in **two** places that must move together:
+   `plugins/rif-runtime/.claude-plugin/plugin.json` → `version`, and
+   `.claude-plugin/marketplace.json` → `plugins[0].version`. See
+   [Versioning](#versioning).
 6. Run validation (below).
 
 Note that `scripts/validate.py` does **not** currently check skills at all — it
