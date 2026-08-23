@@ -512,12 +512,32 @@ def check_prompt_build(doc: dict, report: Report) -> None:
             )
 
         # INV-AUTH-2/3: a resolution log that records a winner is not evidence that the
-        # winner was entitled to win. Check the ranks.
-        losers_conflicts = [other for other in conflicts if other in admitted]
-        for other in dict.fromkeys(([winner] if winner else []) + losers_conflicts):
-            if other not in by_id or ident not in by_id:
+        # winner was entitled to win. Check the ranks of the recorded pair only —
+        # `superseded_by` is the claim of victory. A conflict peer that merely remains
+        # admitted claimed nothing: once the loser is gone that conflict is moot, and
+        # its rank says nothing about who beat whom.
+        if winner is not None and winner in by_id and ident in by_id:
+            _check_resolution_order(report, at, by_id[ident], by_id[winner])
+
+    # INV-AUTH-2: a declared conflict is not resolved by admitting both sides.
+    admitted_set = set(admitted)
+    reported_pairs: set[tuple[str, str]] = set()
+    for ident in admitted:
+        entry = by_id.get(ident)
+        if not entry:
+            continue
+        for other in entry.get("conflicts_with") or []:
+            # A conflict is normally declared on one side only, so dedupe by the pair
+            # itself rather than by which id sorts first.
+            pair = (ident, other) if ident < other else (other, ident)
+            if other not in admitted_set or other not in by_id or pair in reported_pairs:
                 continue
-            _check_resolution_order(report, at, by_id[ident], by_id[other])
+            reported_pairs.add(pair)
+            report.error(
+                "INV-AUTH-2",
+                f"{where}.resolution: {ident!r} and {other!r} declare a conflict but both "
+                "were admitted — the conflict was never resolved",
+            )
 
     # INV-BUILD-3: promotion is attributed to an entitled authority.
     for index, entry in enumerate(resolution.get("promoted") or []):

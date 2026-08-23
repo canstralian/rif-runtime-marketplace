@@ -82,5 +82,11 @@
       "INV-REASON-2"
     ],
     "note": "Tool policy 'constrained' permits an allow-list while the budget funds zero tool calls."
+  },
+  "unresolved-conflict-both-admitted.build.json": {
+    "expect": [
+      "INV-AUTH-2"
+    ],
+    "note": "task.brevity and policy.evidence_marking declare a conflict and both were admitted; the resolution log is complete but the conflict was never resolved."
   }
 }
