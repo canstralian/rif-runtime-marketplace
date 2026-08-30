@@ -56,35 +56,92 @@ class Report:
     """Collects findings for one document."""
 
     def __init__(self, path: Path, kind: str) -> None:
+        """
+        Initialize a validation report for a document.
+        
+        Parameters:
+        	path (Path): Path to the document being validated.
+        	kind (str): Document type being validated.
+        """
         self.path = path
         self.kind = kind
         self.errors: list[str] = []
         self.warnings: list[str] = []
 
     def error(self, invariant: str, message: str) -> None:
+        """
+        Record a validation error for the document.
+        
+        Parameters:
+        	invariant (str): Identifier for the violated invariant.
+        	message (str): Description of the validation error.
+        """
         self.errors.append(f"[{invariant}] {message}")
 
     def warn(self, invariant: str, message: str) -> None:
+        """Record a warning message associated with an invariant.
+        
+        Parameters:
+        	invariant (str): Identifier for the invariant that generated the warning.
+        	message (str): Description of the warning.
+        """
         self.warnings.append(f"[{invariant}] {message}")
 
 
 def canonical_bytes(document: Any) -> bytes:
-    """Canonical serialization per INV-COMPILE-1."""
+    """
+    Serialize a JSON-compatible value into deterministic UTF-8 bytes.
+    
+    Parameters:
+    	document (Any): The value to serialize.
+    
+    Returns:
+    	bytes: The canonical JSON representation encoded as UTF-8.
+    """
     return json.dumps(
         document, sort_keys=True, separators=(",", ":"), ensure_ascii=False
     ).encode("utf-8")
 
 
 def sha256_of(data: bytes) -> str:
+    """Return the SHA-256 digest of the provided bytes with a ``sha256:`` prefix.
+    
+    Parameters:
+    	data (bytes): The bytes to hash.
+    
+    Returns:
+    	str: The prefixed hexadecimal SHA-256 digest.
+    """
     return "sha256:" + hashlib.sha256(data).hexdigest()
 
 
 def canonical_hash(document: dict) -> str:
+    """
+    Compute the canonical SHA-256 hash of a document excluding its existing canonical hash field.
+    
+    Parameters:
+    	document (dict): The JSON document to hash.
+    
+    Returns:
+    	str: A `sha256:`-prefixed hexadecimal digest of the canonical document contents.
+    """
     body = {key: value for key, value in document.items() if key != "canonical_hash"}
     return sha256_of(canonical_bytes(body))
 
 
 def _require(report: Report, obj: dict, keys: list[str], where: str, invariant: str) -> bool:
+    """Check that an object contains all required fields and report any missing fields.
+    
+    Parameters:
+    	report (Report): Report to receive errors for missing fields.
+    	obj (dict): Object to inspect.
+    	keys (list[str]): Required field names.
+    	where (str): Location description used in the error messages.
+    	invariant (str): Identifier associated with reported errors.
+    
+    Returns:
+    	bool: True if all required fields are present, false otherwise.
+    """
     ok = True
     for key in keys:
         if key not in obj:
@@ -94,6 +151,19 @@ def _require(report: Report, obj: dict, keys: list[str], where: str, invariant: 
 
 
 def _enum(report: Report, value: Any, allowed: list[str], where: str, invariant: str) -> bool:
+    """
+    Check whether a value belongs to an allowed set and report invalid values.
+    
+    Parameters:
+        report (Report): Report that receives an error for an invalid value.
+        value (Any): Value to validate.
+        allowed (list[str]): Permitted values.
+        where (str): Location of the value in the document.
+        invariant (str): Identifier associated with the validation error.
+    
+    Returns:
+        bool: `True` if the value is allowed, `False` otherwise.
+    """
     if value not in allowed:
         report.error(invariant, f"{where}: {value!r} is not one of {allowed}")
         return False
@@ -101,7 +171,14 @@ def _enum(report: Report, value: Any, allowed: list[str], where: str, invariant:
 
 
 def check_prompt_ir(doc: Any, report: Report, prefix: str = "") -> None:
-    """Validate one PromptIR document in place, appending findings to report."""
+    """
+    Validate a PromptIR document and append structural, provenance, policy, and replayability findings to the report.
+    
+    Parameters:
+        doc (Any): PromptIR document to validate.
+        report (Report): Report that receives validation errors and warnings.
+        prefix (str): Path prefix used to identify the document in findings.
+    """
     where = prefix or "PromptIR"
     if not isinstance(doc, dict):
         report.error("SCHEMA", f"{where}: document is not an object")
@@ -433,6 +510,13 @@ def _check_resolution_order(report: Report, at: str, loser: dict, winner: dict) 
 
 
 def check_prompt_build(doc: dict, report: Report) -> None:
+    """
+    Validate a PromptBuild document and record schema, resolution, authority, provenance, provider, and verification findings.
+    
+    Parameters:
+        doc (dict): PromptBuild document to validate.
+        report (Report): Report that receives validation errors and warnings.
+    """
     where = "PromptBuild"
     _require(report, doc, ["build_id", "created_at", "prompt_ir", "resolution", "provider"], where, "SCHEMA")
 
@@ -615,7 +699,16 @@ def check_prompt_build(doc: dict, report: Report) -> None:
 
 
 def try_jsonschema(path: Path, doc: Any, report: Report) -> bool:
-    """Optional extra pass. Returns True when jsonschema actually ran."""
+    """
+    Run optional JSON Schema validation when its dependencies are available.
+    
+    Parameters:
+    	doc (Any): Document to validate.
+    	report (Report): Report to receive schema errors and warnings.
+    
+    Returns:
+    	bool: `True` if JSON Schema validation ran, `False` otherwise.
+    """
     try:
         import jsonschema  # type: ignore
         from referencing import Registry, Resource  # type: ignore
@@ -642,6 +735,14 @@ def try_jsonschema(path: Path, doc: Any, report: Report) -> bool:
 
 
 def classify(doc: Any) -> str | None:
+    """Classify a document as PromptBuild, PromptIR, or an unsupported document.
+    
+    Parameters:
+    	doc (Any): The document to classify.
+    
+    Returns:
+    	str | None: "PromptBuild" or "PromptIR" for recognized documents, or `None` otherwise.
+    """
     if not isinstance(doc, dict):
         return None
     if "prompt_ir" in doc or "build_id" in doc:
@@ -652,6 +753,15 @@ def classify(doc: Any) -> str | None:
 
 
 def check_file(path: Path) -> Report | None:
+    """
+    Load and validate a JSON document when it is a supported PromptIR or PromptBuild file.
+    
+    Parameters:
+        path (Path): Path to the JSON document.
+    
+    Returns:
+        Report | None: A validation report for supported documents, including invalid JSON; `None` for unsupported document types.
+    """
     try:
         doc = json.loads(path.read_text())
     except json.JSONDecodeError as exc:
@@ -673,6 +783,14 @@ def check_file(path: Path) -> Report | None:
 
 
 def collect(paths: list[Path]) -> list[Path]:
+    """Collect JSON files from directories and preserve explicitly provided files.
+    
+    Parameters:
+    	paths (list[Path]): Files and directories to inspect.
+    
+    Returns:
+    	list[Path]: Discovered JSON files, sorted within recursively searched directories.
+    """
     files: list[Path] = []
     for path in paths:
         if path.is_dir():
@@ -685,6 +803,15 @@ def collect(paths: list[Path]) -> list[Path]:
 
 
 def main(argv: list[str]) -> int:
+    """
+    Validate PromptIR and PromptBuild documents and report conformance findings.
+    
+    Parameters:
+    	argv (list[str]): Command-line arguments containing input paths and optional strict-mode settings.
+    
+    Returns:
+    	int: 0 if validation succeeds, or 1 if errors are found or strict mode is enabled with warnings.
+    """
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("paths", nargs="*", default=None, help="files or directories (default: examples/)")
     parser.add_argument("--strict", action="store_true", help="treat warnings as failures")

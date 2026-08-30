@@ -27,6 +27,15 @@ EXAMPLES = ROOT / "examples"
 
 
 def codes(messages: list[str]) -> set[str]:
+    """
+    Extract invariant codes from messages that begin with bracketed uppercase codes.
+    
+    Parameters:
+    	messages (list[str]): Messages to inspect.
+    
+    Returns:
+    	set[str]: The set of codes found in the messages.
+    """
     found = set()
     for message in messages:
         match = re.match(r"\[([A-Z0-9-]+)\]", message)
@@ -36,6 +45,12 @@ def codes(messages: list[str]) -> set[str]:
 
 
 def main() -> int:
+    """
+    Validate non-conformant fixtures and conformant examples against the PromptIR checker.
+    
+    Returns:
+        int: `1` if any document fails validation, otherwise `0`.
+    """
     failures: list[str] = []
     checked = 0
 
