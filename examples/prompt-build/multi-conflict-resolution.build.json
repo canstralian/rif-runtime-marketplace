@@ -1,0 +1,197 @@
+{
+  "build_id": "build.2026-08-23.weekly.b7",
+  "created_at": "2026-08-23T10:02:11Z",
+  "prompt_ir": {
+    "promptir_version": "0.1.0",
+    "intent": {
+      "id": "intent.report.weekly",
+      "statement": "Produce the weekly governance report.",
+      "operating_mode": "maintenance"
+    },
+    "identity": {
+      "role": "governance reporter",
+      "scope": "Weekly report over closed executions."
+    },
+    "authority": [
+      {
+        "id": "runtime_constitution",
+        "rank": "developer",
+        "version": "1.4",
+        "description": "RIF Runtime constitution: evidence discipline and authority boundaries."
+      },
+      {
+        "id": "reporting_policy",
+        "rank": "developer",
+        "version": "2026.02",
+        "description": "Reporting policy set: format and length rules for governance reports."
+      },
+      {
+        "id": "mode.maintenance",
+        "rank": "developer",
+        "description": "Operating-mode policy: maintenance mode reasoning and verification profile."
+      },
+      {
+        "id": "task",
+        "rank": "user",
+        "description": "Operator request for this invocation."
+      }
+    ],
+    "instructions": [
+      {
+        "id": "policy.cite_every_execution",
+        "text": "Cite the execution id behind every figure in the report.",
+        "source": "runtime_constitution",
+        "authority": "developer",
+        "version": "1.4",
+        "hash": "sha256:c9d70580fdfbf5f64a4d03cbea19967fd8676a600e5cff2ace376cdeef5de48e",
+        "priority": 100,
+        "rationale": "Evidence contract: figures must be traceable to executions."
+      },
+      {
+        "id": "policy.full_detail",
+        "text": "Include a per-execution breakdown for every execution in the period.",
+        "source": "reporting_policy",
+        "authority": "developer",
+        "version": "2026.02",
+        "hash": "sha256:7a247473f84dc4bf9da2ec698c199634d71f662112b0b395d9d7d491fe1760ab",
+        "priority": 50,
+        "rationale": "Default reporting depth.",
+        "conflicts_with": [
+          "policy.cite_every_execution",
+          "policy.summary_only"
+        ]
+      },
+      {
+        "id": "policy.summary_only",
+        "text": "Report aggregate totals without a per-execution breakdown.",
+        "source": "reporting_policy",
+        "authority": "developer",
+        "version": "2026.02",
+        "hash": "sha256:0fd59640fcf4b4c8a10b46644ab05e98d8b3317f0d4e86dc8a2be48c475bd0f1",
+        "priority": 30,
+        "rationale": "Applies when the period exceeds the report length budget."
+      },
+      {
+        "id": "mode.maintenance.scope",
+        "text": "Report on closed executions only; do not analyse open ones.",
+        "source": "mode.maintenance",
+        "authority": "developer",
+        "version": "2026.02",
+        "hash": "sha256:68fcc8506193d6b8a79eeedc0d3485d0d1f427dc2bb302b2eee86faf43fac7f8",
+        "priority": 80,
+        "rationale": "Maintenance mode funds reporting, not investigation."
+      },
+      {
+        "id": "task.weekly_report",
+        "text": "Give me this week's governance report.",
+        "source": "task",
+        "authority": "user",
+        "version": "current",
+        "hash": "sha256:f9bf3f69f788f71891baee71c6374a1ddff6d173cf32bcf1764858fac1c3bad9",
+        "priority": 40,
+        "rationale": "Stated operator intent."
+      }
+    ],
+    "context": {
+      "items": [
+        {
+          "id": "runtime.period_summary",
+          "kind": "runtime_state",
+          "trust": "trusted",
+          "content": "period=2026-08-17..2026-08-23; closed executions: 412; denied: 7.",
+          "provenance": {
+            "origin": "rif_runtime",
+            "selector": "period_summary"
+          }
+        }
+      ]
+    },
+    "reasoning": {
+      "effort": "medium",
+      "justification": "mode.maintenance",
+      "verification": {
+        "mode": "selective",
+        "independent": true,
+        "axis": "model_diversity"
+      },
+      "tools": {
+        "policy": "constrained",
+        "allow": [
+          "read_evidence"
+        ]
+      }
+    },
+    "capabilities": {
+      "granted": [
+        "read_evidence"
+      ],
+      "denied": [
+        "write_ticket"
+      ],
+      "gate_policy": "reporting_policy@2026.02"
+    },
+    "output": {
+      "format": "structured",
+      "uncertainty_representation": "Mark any figure without a traceable execution id as 'unattributed'."
+    },
+    "budget": {
+      "max_effort": "medium",
+      "max_tool_calls": 4,
+      "max_tokens": 16000
+    },
+    "replayable": true,
+    "canonical_hash": "sha256:fe0d6963929960bf53f324078a9a3a8207125fbbe9dfbb76fb371bd6dc88e756"
+  },
+  "resolution": {
+    "admitted": [
+      "policy.cite_every_execution",
+      "policy.summary_only",
+      "mode.maintenance.scope",
+      "task.weekly_report"
+    ],
+    "suppressed": [
+      {
+        "id": "policy.full_detail",
+        "reason": "A per-execution breakdown for 412 executions cannot carry a citation per figure within the report length budget; the evidence contract outranks reporting depth.",
+        "superseded_by": "policy.cite_every_execution"
+      }
+    ]
+  },
+  "context_selection": [
+    {
+      "item_id": "runtime.period_summary",
+      "selector": "period_summary"
+    }
+  ],
+  "capability_policy": {
+    "granted": [
+      "read_evidence"
+    ],
+    "denied": [
+      "write_ticket"
+    ]
+  },
+  "provider": {
+    "provider": "anthropic",
+    "model": "claude-sonnet-4-5",
+    "adapter_version": "0.1.0",
+    "provider_payload_hash": "sha256:ed437b83151bacdeb8876a3142fd61263dc7a2c3a9f1840dcb8191f309378df8"
+  },
+  "response": {
+    "response_id": "msg_01WEEKLY7",
+    "output_hash": "sha256:7cec714440d790e1f91e52283be8ca3f8f25f64fdeb543c4dca44b9163740c41",
+    "usage": {
+      "input_tokens": 2140,
+      "output_tokens": 388
+    }
+  },
+  "evidence_refs": [
+    "ledger://evidence/period/2026-W34"
+  ],
+  "verification": {
+    "performed": true,
+    "axis": "model_diversity",
+    "verifier_build_id": "build.2026-08-23.weekly.b7.v",
+    "result": "pass"
+  }
+}
