@@ -234,9 +234,7 @@ matches its catalog entry.
   `Marketplace structure: OK` and exits 0.
 - README consistency with the skill list or directory tree.
 
-**What failure looks like.** The script is a chain of bare `assert` statements,
-so a failure surfaces as an `AssertionError` traceback and exit 1, not a
-diagnostic message.
+**What failure looks like.** Failed assertions surface as an `AssertionError` traceback and exit 1, not a diagnostic message. Other failures, such as malformed JSON or missing keys/files, surface as their respective unhandled exception tracebacks.
 
 **Never run it under `python -O`.** That flag strips every assert, reducing the
 script to its print statement. Against a manifest whose `plugin.json` name
