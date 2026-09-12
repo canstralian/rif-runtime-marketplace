@@ -234,9 +234,20 @@ matches its catalog entry.
   `Marketplace structure: OK` and exits 0.
 - README consistency with the skill list or directory tree.
 
-**What failure looks like.** Failed assertions surface as an `AssertionError` traceback and exit 1, not a diagnostic message. Other failures, such as malformed JSON or missing keys/files, surface as their respective unhandled exception tracebacks.
+**What failure looks like.** Assertion-based validation failures surface as an
+`AssertionError` traceback and a non-zero exit, rather than a purpose-built
+diagnostic. Failures that occur before or outside those assertions — such as
+malformed JSON, missing keys, or missing files — surface as their respective
+unhandled exception tracebacks.
 
-**Never run it under `python -O`.** That flag strips every `assert`, so for otherwise readable manifests the script performs no validation and still prints its success message. Against a manifest whose `plugin.json` name disagrees with its catalog entry — which the normal invocation rejects with exit 1 — `python3 -O scripts/validate.py` prints `Marketplace structure: OK` and exits 0.
+**Never run it under `python -O`.** Optimization strips the script's `assert`
+statements, disabling its assertion-based invariant checks. File reads, JSON
+parsing, and other ordinary execution still occur and may fail. For otherwise
+readable manifests, however, an invariant that the normal invocation rejects can
+pass unchecked and the script can still print `Marketplace structure: OK`.
+Against a manifest whose `plugin.json` name disagrees with its catalog entry,
+the normal invocation rejects the mismatch while `python3 -O scripts/validate.py`
+prints `Marketplace structure: OK` and exits 0.
 
 There is no test suite, linter, formatter, or CI workflow in this repository;
 `.github/` does not exist. The commands above are the entire verification
