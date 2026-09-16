@@ -166,11 +166,17 @@ capability, never a model, provider, or implementation detail.
 
 `SKILL-CONTRACT.md` §1 appears to conflict with this: it lists `name`,
 `description`, `version`, and `scope` as things a skill must declare. The
-contract's own reference template resolves the conflict. Frontmatter carries
-`name` and `description`; `scope` is declared in the body as `## Scope
-boundary`; `version` is qualified "when versioning is introduced", which has not
-happened. All ten skills carry exactly two frontmatter keys. Follow the
-reference template, not a literal reading of §1.
+contract's own reference template resolves it. Frontmatter carries `name` and
+`description` only; the template declares `scope` in the body under a
+`## Scope boundary` heading, and qualifies `version` as "when versioning is
+introduced", which has not happened. All ten skills carry exactly two
+frontmatter keys. Follow the reference template, not a literal reading of §1.
+
+The ten current skills do **not** carry a `## Scope boundary` section — their
+shared body runs `## Operating principles`, `## Workflow`, `## RIF Runtime
+mental model`, `## Output discipline`, and nothing else. That is part of the
+un-specialized state described above, not a pattern to copy: a new skill follows
+the reference template and does include the section.
 
 **Directory naming.** Lowercase kebab-case. The directory name, frontmatter
 `name`, and the invocation `/rif-runtime:<name>` are always the same string.
@@ -221,9 +227,10 @@ Local install test from inside Claude Code:
 ```
 
 **What `validate.py` checks.** The marketplace name, owner type, and a non-empty
-plugin list; that each `plugins[].source` directory exists; that each source
-contains `.claude-plugin/plugin.json`; and that each plugin manifest's `name`
-matches its catalog entry.
+plugin list; that each catalog entry has a non-empty `name`; that each
+`plugins[].source` directory exists; that each source contains
+`.claude-plugin/plugin.json`; and that each plugin manifest's `name` matches its
+catalog entry.
 
 **What it does not check.** Verify these by hand:
 
@@ -234,11 +241,20 @@ matches its catalog entry.
   `Marketplace structure: OK` and exits 0.
 - README consistency with the skill list or directory tree.
 
-**What failure looks like.** Assertion-based validation failures surface as an
-`AssertionError` traceback and a non-zero exit, rather than a purpose-built
-diagnostic. Failures that occur before or outside those assertions — such as
-malformed JSON, missing keys, or missing files — surface as their respective
-unhandled exception tracebacks.
+**What failure looks like.** Every failure is an unhandled traceback and a
+non-zero exit, never a purpose-built diagnostic. Which exception you get depends
+on where the script gives up:
+
+| Broken input | Exception |
+|---|---|
+| `.claude-plugin/marketplace.json` missing | `FileNotFoundError` — it is read before the first assert |
+| Malformed JSON in either manifest | `json.decoder.JSONDecodeError` |
+| Missing `name`, `owner`, or `plugins` key | `KeyError` |
+| Empty plugin list or entry `name`, missing source directory, missing `plugin.json`, name mismatch | `AssertionError` |
+
+Note the asymmetry in that last row: a missing source *directory* or plugin
+*manifest* is caught by an assert rather than by the file read, so `python -O`
+skips those two checks entirely.
 
 **Never run it under `python -O`.** Optimization strips the script's `assert`
 statements, disabling its assertion-based invariant checks. File reads, JSON
