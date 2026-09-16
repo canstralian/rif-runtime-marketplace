@@ -6,6 +6,8 @@ This document maps the current marketplace skills to the RIF Skill Contract and 
 |---|---|---|---|---|---|
 | `rif-runtime` | Runtime architectural context | Explain runtime lifecycle, boundaries, invariants | Execute authoritative runtime state changes | Independent for read-only analysis | Recommended for consequential claims |
 | `run-rif-runtime` | Runtime execution entry point | Translate intent into a runtime execution request | Provider selection, evidence persistence, governance bypass | Runtime-controlled | Mandatory for material execution |
+| `prompt-compiler` | Prompt compilation | Compile intent, policy, context, and reasoning policy into PromptIR with provenance | Policy authorship, retrieval, provider lowering, execution | Independent across intents; ordered after policy resolution | Recommended; conformance checker is mandatory |
+| `prompt-audit` | Prompt-layer verification | Authority resolution, provenance, context isolation, reasoning justification, replayability of a PromptBuild | Compiling or repairing PromptIR; replay reconstruction | Parallel across builds | Mandatory for prompt-layer conformance claims; must not run in the pass that produced the build |
 | `architecture-review` | Structural review | Boundaries, coupling, failure modes, evolution risk | Runtime implementation or release approval | Parallel with other read-only reviews | Recommended |
 | `constitution-guardian` | Constitutional review | Invariants, authority boundaries, prohibited changes | Operational execution | Parallel when inputs are immutable | Recommended; mandatory for governed changes |
 | `governance-review` | Governance review | Policies, authority, controls, evidence requirements | Constitutional source of truth | Parallel with architecture review | Recommended |
@@ -111,6 +113,30 @@ Add explicit gates for:
 - changelog completeness;
 - rollback readiness.
 
+### `prompt-compiler`
+
+Add explicit handling for:
+
+- authority declaration and instruction admission;
+- conflict detection and rank/priority resolution;
+- instruction provenance (`source`, `version`, `hash`, `rationale`);
+- context trust marking and injection containment;
+- reasoning policy derivation from operating mode and budget;
+- canonicalization and hashing.
+
+See [`PROMPT-IR.md`](PROMPT-IR.md).
+
+### `prompt-audit`
+
+Add explicit checks for:
+
+- suppression completeness and conflict winners;
+- instruction drift against the current policy set;
+- context-to-instruction promotion attribution;
+- reasoning justification traceability;
+- adapter fidelity (nothing added, nothing dropped);
+- replayability without provider continuation handles.
+
 ### `rif-runtime` and `run-rif-runtime`
 
 Keep these distinct:
@@ -128,7 +154,8 @@ Intent
 run-rif-runtime
   ↓
 Runtime orchestration
-  ├── architecture-review ─────┐
+  ├── prompt-compiler ─────────┐
+  ├── architecture-review ─────┤
   ├── constitution-guardian ───┤
   ├── governance-review ───────┤
   ├── knowledge-engine ────────┤
@@ -140,7 +167,7 @@ Runtime orchestration
                ↓
           evidence ledger
                ↓
-       replay-analysis / verifier
+       prompt-audit / replay-analysis / verifier
                ↓
        documentation-engine
                ↓

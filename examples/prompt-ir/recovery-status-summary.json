@@ -1,0 +1,118 @@
+{
+  "promptir_version": "0.1.0",
+  "intent": {
+    "id": "intent.status.summary",
+    "statement": "Summarise the current runtime posture for the operator.",
+    "operating_mode": "recovery"
+  },
+  "identity": {
+    "role": "runtime status reporter",
+    "scope": "Read-only restatement of runtime-owned state."
+  },
+  "authority": [
+    {
+      "id": "runtime_constitution",
+      "rank": "developer",
+      "version": "1.4",
+      "description": "RIF Runtime constitution: evidence discipline and authority boundaries."
+    },
+    {
+      "id": "mode.recovery",
+      "rank": "developer",
+      "description": "Operating-mode policy: recovery mode minimises reasoning spend and denies tools."
+    },
+    {
+      "id": "task",
+      "rank": "user",
+      "description": "Operator request for this invocation."
+    }
+  ],
+  "instructions": [
+    {
+      "id": "policy.no_unsupported_claims",
+      "text": "Do not assert findings that are not supported by supplied evidence.",
+      "source": "runtime_constitution",
+      "authority": "developer",
+      "version": "1.4",
+      "hash": "sha256:1ac44332d675ef6f46f77cf4aceded86be208e8a3cfd2eda7017cd327df20e31",
+      "priority": 100,
+      "rationale": "Evidence contract; RIF Skill Contract section 5."
+    },
+    {
+      "id": "mode.recovery.scope",
+      "text": "Restate supplied runtime state only. Do not analyse, recommend, or extrapolate.",
+      "source": "mode.recovery",
+      "authority": "developer",
+      "version": "2026.03",
+      "hash": "sha256:19c8aaeaa72d31a07712a2dcd96829e852b96bc6a4b3cb7cba44569cd413a5c1",
+      "priority": 90,
+      "rationale": "Recovery mode buys a restatement, not an analysis; the effort level is not funded for inference."
+    },
+    {
+      "id": "task.summarise",
+      "text": "Give me the current posture and what is currently gated.",
+      "source": "task",
+      "authority": "user",
+      "version": "current",
+      "hash": "sha256:96c8ce7da22d21be8884cc5ca0dde083537426a5e869a1052840e9b01c924bcf",
+      "priority": 50,
+      "rationale": "Stated operator intent."
+    }
+  ],
+  "context": {
+    "items": [
+      {
+        "id": "runtime.posture",
+        "kind": "runtime_state",
+        "trust": "trusted",
+        "content": "posture=elevated since 2026-08-23T09:10Z; open executions: 2; budget remaining: 41%.",
+        "provenance": {
+          "origin": "rif_runtime",
+          "selector": "current_posture"
+        }
+      },
+      {
+        "id": "runtime.gates",
+        "kind": "runtime_state",
+        "trust": "trusted",
+        "content": "denied: isolate_host, write_ticket, provider_egress. granted: read_evidence.",
+        "provenance": {
+          "origin": "rif_runtime",
+          "selector": "capability_gates"
+        }
+      }
+    ]
+  },
+  "reasoning": {
+    "effort": "low",
+    "justification": "mode.recovery",
+    "verification": {
+      "mode": "minimal",
+      "independent": false
+    },
+    "tools": {
+      "policy": "denied"
+    }
+  },
+  "capabilities": {
+    "granted": [],
+    "denied": [
+      "read_evidence",
+      "query_edr",
+      "isolate_host",
+      "write_ticket"
+    ],
+    "gate_policy": "mode.recovery"
+  },
+  "output": {
+    "format": "text",
+    "uncertainty_representation": "State 'not available in supplied state' rather than reconstructing a value."
+  },
+  "budget": {
+    "max_effort": "low",
+    "max_tool_calls": 0,
+    "max_tokens": 2000
+  },
+  "replayable": true,
+  "canonical_hash": "sha256:0d65417c6b1db37e836eebb1fff3c33db8e098d8b103dd9b3276a78260da3455"
+}

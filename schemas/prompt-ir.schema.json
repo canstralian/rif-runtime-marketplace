@@ -1,0 +1,231 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/canstralian/rif-runtime-marketplace/schemas/prompt-ir.schema.json",
+  "title": "RIF PromptIR",
+  "description": "Intermediate representation the RIF Runtime compiles before invoking a model. See docs/PROMPT-IR.md.",
+  "type": "object",
+  "required": ["promptir_version", "authority", "instructions", "reasoning", "output"],
+  "additionalProperties": false,
+  "properties": {
+    "promptir_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Specification version this document conforms to."
+    },
+    "canonical_hash": {
+      "$ref": "#/$defs/sha256",
+      "description": "sha256 over the canonical serialization of this document with canonical_hash removed (INV-COMPILE-1)."
+    },
+    "intent": {
+      "type": "object",
+      "description": "Resolved user intent this build serves.",
+      "required": ["id", "statement"],
+      "properties": {
+        "id": { "type": "string" },
+        "statement": { "type": "string" },
+        "operating_mode": { "$ref": "#/$defs/operating_mode" }
+      }
+    },
+    "identity": {
+      "type": "object",
+      "description": "Role the model is asked to occupy. Identity is not an instruction; it frames them.",
+      "required": ["role"],
+      "properties": {
+        "role": { "type": "string" },
+        "scope": { "type": "string" }
+      }
+    },
+    "authority": {
+      "type": "array",
+      "description": "Sources entitled to issue instructions in this build (INV-AUTH-1, INV-PROV-3).",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "rank"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "rank": { "$ref": "#/$defs/authority_rank" },
+          "description": { "type": "string" },
+          "version": { "type": "string" }
+        }
+      }
+    },
+    "instructions": {
+      "type": "array",
+      "description": "Behavioral rules with provenance (§4).",
+      "items": { "$ref": "#/$defs/instruction" }
+    },
+    "examples": {
+      "type": "array",
+      "description": "Demonstrations and edge cases. Examples are not instructions and carry no authority.",
+      "items": {
+        "type": "object",
+        "required": ["id", "input", "output"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "input": { "type": "string" },
+          "output": { "type": "string" },
+          "demonstrates": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Instruction ids this example illustrates."
+          },
+          "edge_case": { "type": "boolean" }
+        }
+      }
+    },
+    "context": {
+      "type": "object",
+      "description": "Data supplied to the generation. Never instruction (INV-LAYER-3).",
+      "additionalProperties": false,
+      "properties": {
+        "task": { "type": "object" },
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/context_item" }
+        }
+      }
+    },
+    "reasoning": { "$ref": "#/$defs/reasoning_policy" },
+    "capabilities": {
+      "type": "object",
+      "description": "Capability gates in force for this invocation.",
+      "additionalProperties": false,
+      "properties": {
+        "granted": { "type": "array", "items": { "type": "string" } },
+        "denied": { "type": "array", "items": { "type": "string" } },
+        "gate_policy": { "type": "string" }
+      }
+    },
+    "output": {
+      "type": "object",
+      "description": "Contract the response must satisfy (§11 Output).",
+      "required": ["format"],
+      "additionalProperties": false,
+      "properties": {
+        "format": { "enum": ["text", "structured", "json_schema"] },
+        "schema_ref": { "type": "string" },
+        "uncertainty_representation": {
+          "type": "string",
+          "description": "How the response must express insufficient evidence rather than fabricating certainty."
+        },
+        "refusal_representation": { "type": "string" }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "description": "Execution envelope the reasoning policy must fit inside (INV-REASON-2).",
+      "additionalProperties": true,
+      "properties": {
+        "max_effort": { "$ref": "#/$defs/effort" },
+        "max_tool_calls": { "type": "integer", "minimum": 0 },
+        "max_tokens": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "replayable": {
+      "type": "boolean",
+      "description": "False when the build cannot be reconstructed from runtime-owned state alone (INV-STATE-1)."
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "authority_rank": {
+      "enum": ["system", "developer", "user", "assistant", "tool"],
+      "description": "system > developer > user > assistant > tool (§3.1)."
+    },
+    "operating_mode": {
+      "enum": ["normal", "maintenance", "recovery"]
+    },
+    "effort": {
+      "enum": ["minimal", "low", "medium", "high"]
+    },
+    "instruction": {
+      "type": "object",
+      "required": ["id", "text", "source", "authority", "hash"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "text": { "type": "string", "minLength": 1 },
+        "source": {
+          "type": "string",
+          "description": "Must match a declared authority[].id (INV-PROV-3)."
+        },
+        "authority": { "$ref": "#/$defs/authority_rank" },
+        "version": { "type": "string" },
+        "hash": { "$ref": "#/$defs/sha256" },
+        "priority": { "type": "integer" },
+        "rationale": { "type": "string" },
+        "conflicts_with": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "context_item": {
+      "type": "object",
+      "required": ["id", "kind", "trust"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "kind": {
+          "enum": ["evidence", "memory", "tool_output", "document", "user_state", "runtime_state"]
+        },
+        "trust": { "enum": ["trusted", "untrusted"] },
+        "content": { "type": "string" },
+        "evidence_id": {
+          "type": "string",
+          "description": "Ledger address; content may be omitted when addressed by id (INV-STATE-2)."
+        },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "origin": { "type": "string" },
+            "retrieved_at": { "type": "string" },
+            "relevance": { "type": "number", "minimum": 0, "maximum": 1 },
+            "selector": { "type": "string" }
+          }
+        }
+      }
+    },
+    "reasoning_policy": {
+      "type": "object",
+      "required": ["effort", "justification"],
+      "additionalProperties": false,
+      "properties": {
+        "effort": { "$ref": "#/$defs/effort" },
+        "justification": {
+          "type": "string",
+          "description": "Policy or mode identifier that also appears in authority[] or instructions[] (INV-REASON-1)."
+        },
+        "verification": {
+          "type": "object",
+          "required": ["mode"],
+          "additionalProperties": false,
+          "properties": {
+            "mode": { "enum": ["none", "minimal", "selective", "required"] },
+            "independent": { "type": "boolean" },
+            "axis": {
+              "enum": ["same_model", "model_diversity", "provider_diversity"],
+              "description": "Provider diversity and model diversity are independent axes (INV-REASON-3)."
+            }
+          }
+        },
+        "tools": {
+          "type": "object",
+          "required": ["policy"],
+          "additionalProperties": false,
+          "properties": {
+            "policy": { "enum": ["denied", "constrained", "allowed"] },
+            "allow": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      }
+    }
+  }
+}

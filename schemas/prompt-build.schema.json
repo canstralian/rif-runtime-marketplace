@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/canstralian/rif-runtime-marketplace/schemas/prompt-build.schema.json",
+  "title": "RIF PromptBuild",
+  "description": "Audit artifact wrapping one PromptIR document with its resolution log, provider lowering, and response linkage. See docs/PROMPT-IR.md §10.",
+  "type": "object",
+  "required": ["build_id", "created_at", "prompt_ir", "resolution", "provider"],
+  "additionalProperties": false,
+  "properties": {
+    "build_id": { "type": "string", "minLength": 1 },
+    "created_at": { "type": "string", "description": "RFC 3339 timestamp." },
+    "prompt_ir": {
+      "$ref": "https://github.com/canstralian/rif-runtime-marketplace/schemas/prompt-ir.schema.json"
+    },
+    "resolution": {
+      "type": "object",
+      "description": "How instruction authority was resolved (INV-BUILD-1..3).",
+      "required": ["admitted", "suppressed"],
+      "additionalProperties": false,
+      "properties": {
+        "admitted": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Instruction ids that reached the model."
+        },
+        "suppressed": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "reason"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string" },
+              "reason": { "type": "string" },
+              "superseded_by": {
+                "type": "string",
+                "description": "Winning instruction id; required when suppression was caused by conflict (INV-BUILD-2)."
+              }
+            }
+          }
+        },
+        "promoted": {
+          "type": "array",
+          "description": "Context items promoted to instruction rank. Each names the admitting authority (INV-BUILD-3).",
+          "items": {
+            "type": "object",
+            "required": ["context_item_id", "admitted_by", "reason"],
+            "additionalProperties": false,
+            "properties": {
+              "context_item_id": { "type": "string" },
+              "admitted_by": { "type": "string" },
+              "reason": { "type": "string" },
+              "instruction_id": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "context_selection": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["item_id"],
+        "additionalProperties": false,
+        "properties": {
+          "item_id": { "type": "string" },
+          "selector": { "type": "string" },
+          "relevance": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    },
+    "capability_policy": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "granted": { "type": "array", "items": { "type": "string" } },
+        "denied": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "provider": {
+      "type": "object",
+      "required": ["provider", "model", "provider_payload_hash"],
+      "additionalProperties": false,
+      "properties": {
+        "provider": { "type": "string" },
+        "model": { "type": "string" },
+        "adapter_version": { "type": "string" },
+        "provider_payload_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "description": "Hash over the exact serialized request body (INV-ADAPT-3)."
+        },
+        "continuation_handle": {
+          "type": "string",
+          "description": "Provider conversation handle, if any. Execution substrate only (INV-STATE-1)."
+        }
+      }
+    },
+    "response": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "response_id": { "type": "string" },
+        "output_hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "usage": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "evidence_refs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Ledger ids supporting claims made in the response."
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "performed": { "type": "boolean" },
+        "axis": { "enum": ["same_model", "model_diversity", "provider_diversity"] },
+        "verifier_build_id": { "type": "string" },
+        "result": { "enum": ["pass", "fail", "conditional", "insufficient_evidence", "not_applicable"] }
+      }
+    }
+  }
+}
