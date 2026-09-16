@@ -30,9 +30,12 @@ if [ ! -f scripts/validate.py ]; then
   exit 0
 fi
 
-# Deliberately not 'python3 -O': that strips the script's asserts and it then
-# reports OK on a broken manifest. See the Validation section of CLAUDE.md.
-if validate_output=$(python3 scripts/validate.py 2>&1); then
+# -E ignores PYTHON* environment variables. Without it, a remote environment
+# that exports PYTHONOPTIMIZE strips the script's asserts, and this hook then
+# reports OK on a broken manifest — the same trap as running it under -O.
+# Verified: with PYTHONOPTIMIZE=1 a version desync passes silently; with -E it
+# fails as it should. See the Validation section of CLAUDE.md.
+if validate_output=$(python3 -E scripts/validate.py 2>&1); then
   echo "session-start: ${validate_output}"
 else
   echo "session-start: scripts/validate.py FAILED — the marketplace manifests are broken."

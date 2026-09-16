@@ -292,6 +292,14 @@ disagrees with its catalog entry — which the normal invocation rejects with ex
 1 — `python3 -O scripts/validate.py` prints `Marketplace structure: OK` and
 exits 0.
 
+**The `PYTHONOPTIMIZE` environment variable does the same thing silently.** It
+needs no flag on the command line, so a validator invoked from a script or CI
+step inherits it and reports a false pass. Anything that runs these scripts
+unattended should invoke `python3 -E`, which ignores `PYTHON*` variables;
+`.claude/hooks/session-start.sh` does. Confirmed: with `PYTHONOPTIMIZE=1` a
+version desync prints `Marketplace structure: OK (12 skills)` and exits 0, while
+`python3 -E` fails it correctly.
+
 ## Versioning
 
 The plugin sits at `1.1.0` and the marketplace at `1.0.0`. They are **two
