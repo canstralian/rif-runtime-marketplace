@@ -6,7 +6,8 @@ Guidance for Claude Code when working in this repository.
 
 A **Claude Code plugin marketplace** for the RIF Runtime project. It is a
 distribution catalog — JSON manifests and Markdown skill definitions. There is
-no application code, no build step, no test suite, and no runtime here.
+no application code, no build step, and no runtime here. What testing exists
+validates the catalog's own structure and conformance fixtures, not a product.
 
 The RIF Runtime application lives in a **separate** repository
 (`canstralian/rif-runtime`). This separation is intentional: the marketplace
@@ -14,8 +15,14 @@ handles catalog and distribution; the application handles execution. Do not
 import runtime implementation into this repo, and do not assume the runtime's
 source is available when reasoning about a skill.
 
-The only code is `scripts/validate.py` — stdlib-only Python 3, not marked
-executable. Run it as `python3 scripts/validate.py`.
+The code is three stdlib-only Python 3 scripts in `scripts/`, none marked
+executable — run them as `python3 scripts/<name>.py`:
+
+| Script | Purpose |
+|---|---|
+| `validate.py` | Marketplace, plugin, and skill structure |
+| `validate_prompt_ir.py` | PromptIR / PromptBuild conformance over `examples/` |
+| `test_validator.py` | Self-test for the conformance checker |
 
 ## Constraints
 
@@ -23,11 +30,11 @@ These five rules change what you do. The rest of this file is reference.
 
 | Rule | Why |
 |---|---|
-| Never deduplicate the ten identical `SKILL.md` bodies | Divergence is the planned direction — [Skills are intentionally un-specialized](#skills-are-intentionally-un-specialized) |
+| Never deduplicate the ten identical `SKILL.md` bodies | Divergence is the planned direction — [Ten of the twelve skills are intentionally un-specialized](#ten-of-the-twelve-skills-are-intentionally-un-specialized) |
 | Never give a skill a runtime responsibility | Contract §11 — [The Skill Contract](#the-skill-contract) |
 | Never report a check as passing unless it ran | Contract §5 evidence discipline |
-| Move both plugin-version fields together | Nothing verifies they agree — [Versioning](#versioning) |
-| Never claim tests or CI ran | Neither exists — [Validation](#validation) |
+| Move both plugin-version fields together | `validate.py` enforces it — [Versioning](#versioning) |
+| Run all three `scripts/` checks before pushing | CI runs exactly these — [Validation](#validation) |
 
 ## Layout
 
@@ -46,7 +53,14 @@ These five rules change what you do. The rest of this file is reference.
 │   ├── SKILL-CONTRACT.md         # Normative contract every skill must satisfy
 │   └── SKILL-MAPPING.md          # Per-skill boundaries + planned specialization
 ├── scripts/
-│   └── validate.py               # Structural validation of the manifests
+│   ├── validate.py               # Marketplace, plugin, and skill structure
+│   ├── validate_prompt_ir.py     # PromptIR / PromptBuild conformance
+│   └── test_validator.py         # Self-test for the conformance checker
+├── examples/                     # PromptIR documents the conformance check reads
+├── tests/                        # Conformant and non-conformant fixtures
+├── .github/
+│   └── workflows/validate.yml    # CI: runs the three scripts above
+├── .claude/                      # Agent config: hooks, settings, ECC bundle
 ├── LICENSE                       # MIT
 └── README.md
 ```
@@ -63,7 +77,7 @@ A new capability *area* means a new plugin, not more skills bolted onto
 `rif-runtime`. The README names this explicitly: keeping the marketplace from
 becoming a monolith is a design goal.
 
-## The ten skills
+## The twelve skills
 
 All live under `plugins/rif-runtime/skills/` and are invoked namespaced as
 `/rif-runtime:<skill-name>`.
@@ -80,15 +94,22 @@ All live under `plugins/rif-runtime/skills/` and are invoked namespaced as
 | `replay-analysis` | Trace reproducibility, explainability, reconciliation |
 | `documentation-engine` | Validated implementation/decisions → documentation |
 | `release-manager` | Versioning, regression risk, release readiness |
+| `prompt-audit` | PromptIR / PromptBuild conformance auditing |
+| `prompt-compiler` | PromptIR compilation into PromptBuild output |
 
 `rif-runtime` and `run-rif-runtime` are deliberately distinct — understanding
 versus execution — and must not collapse into each other.
 
-## Skills are intentionally un-specialized
+## Ten of the twelve skills are intentionally un-specialized
 
 **Read this before editing any `SKILL.md`.**
 
-All ten skill files are byte-identical from the `## Operating principles`
+`prompt-audit` and `prompt-compiler` are specialized: each follows the
+reference template in `docs/SKILL-CONTRACT.md`, with `## Purpose`,
+`## Scope boundary`, `## Inputs`, `## Preconditions`, and the rest. They are the
+model for what the other ten should become.
+
+The other ten skill files are byte-identical from the `## Operating principles`
 heading onward. They differ only in:
 
 - YAML frontmatter (`name`, `description`),
@@ -98,6 +119,7 @@ heading onward. They differ only in:
 This is a documented state, not an oversight. `docs/SKILL-MAPPING.md` records it
 under **"Immediate specialization requirements"** and specifies, per skill, the
 capability-specific criteria that should replace the shared generic workflow.
+The two specialized skills show that this work has started.
 
 - **Do not** factor the shared body into an include or a common file. The
   intended direction is divergence, not deduplication.
@@ -169,14 +191,15 @@ capability, never a model, provider, or implementation detail.
 contract's own reference template resolves it. Frontmatter carries `name` and
 `description` only; the template declares `scope` in the body under a
 `## Scope boundary` heading, and qualifies `version` as "when versioning is
-introduced", which has not happened. All ten skills carry exactly two
-frontmatter keys. Follow the reference template, not a literal reading of §1.
+introduced", which has not happened. All twelve skills carry exactly two
+frontmatter keys, and `validate.py` enforces `name` and a non-empty
+`description`. Follow the reference template, not a literal reading of §1.
 
-The ten current skills do **not** carry a `## Scope boundary` section — their
-shared body runs `## Operating principles`, `## Workflow`, `## RIF Runtime
+The ten un-specialized skills do **not** carry a `## Scope boundary` section —
+their shared body runs `## Operating principles`, `## Workflow`, `## RIF Runtime
 mental model`, `## Output discipline`, and nothing else. That is part of the
-un-specialized state described above, not a pattern to copy: a new skill follows
-the reference template and does include the section.
+un-specialized state described above, not a pattern to copy. `prompt-audit` and
+`prompt-compiler` do carry it, and are the pattern to follow.
 
 **Directory naming.** Lowercase kebab-case. The directory name, frontmatter
 `name`, and the invocation `/rif-runtime:<name>` are always the same string.
@@ -212,12 +235,17 @@ directory trees). Documents lead with a `#` H1.
 
 ## Validation
 
-Run both from the repository root:
+CI runs these three from the repository root on every push and pull request
+(`.github/workflows/validate.yml`). Run them yourself before pushing:
 
 ```bash
-python3 scripts/validate.py     # prints "Marketplace structure: OK"
-claude plugin validate .        # full Claude Code marketplace validation
+python3 scripts/validate.py                        # prints "Marketplace structure: OK (12 skills)"
+python3 scripts/validate_prompt_ir.py --strict examples/
+python3 scripts/test_validator.py
 ```
+
+`claude plugin validate .` additionally runs the full Claude Code marketplace
+validation, which CI does not.
 
 Local install test from inside Claude Code:
 
@@ -228,18 +256,19 @@ Local install test from inside Claude Code:
 
 **What `validate.py` checks.** The marketplace name, owner type, and a non-empty
 plugin list; that each catalog entry has a non-empty `name`; that each
-`plugins[].source` directory exists; that each source contains
-`.claude-plugin/plugin.json`; and that each plugin manifest's `name` matches its
-catalog entry.
+`plugins[].source` directory exists and contains `.claude-plugin/plugin.json`;
+that each plugin manifest's `name` **and `version`** match its catalog entry; and,
+for every skill directory, that `SKILL.md` exists, has YAML frontmatter, has a
+`name` matching its directory, and has a non-empty `description`. It prints the
+skill count it validated.
 
-**What it does not check.** Verify these by hand:
+**What it still does not check.** Verify these by hand:
 
-- Anything under `skills/`. Frontmatter, `name`/directory agreement, and body
-  structure are unread — the script never opens a `SKILL.md`.
-- That the two plugin-version fields agree. Setting `plugins[0].version` to
-  `9.9.9` while `plugin.json` stays `1.0.0` still prints
-  `Marketplace structure: OK` and exits 0.
+- Skill *body* structure. Frontmatter is parsed; the body is not. Nothing
+  enforces the reference template or the output contract.
 - README consistency with the skill list or directory tree.
+- The top-level marketplace `version` — only the plugin version pair is
+  compared.
 
 **What failure looks like.** Every failure is an unhandled traceback and a
 non-zero exit, never a purpose-built diagnostic. Which exception you get depends
@@ -250,30 +279,24 @@ on where the script gives up:
 | `.claude-plugin/marketplace.json` missing | `FileNotFoundError` — it is read before the first assert |
 | Malformed JSON in either manifest | `json.decoder.JSONDecodeError` |
 | Missing `name`, `owner`, or `plugins` key | `KeyError` |
-| Empty plugin list or entry `name`, missing source directory, missing `plugin.json`, name mismatch | `AssertionError` |
+| Empty plugin list or entry `name`, missing source directory, missing `plugin.json`, name or version mismatch, missing or malformed `SKILL.md` frontmatter | `AssertionError` |
 
-Note the asymmetry in that last row: a missing source *directory* or plugin
-*manifest* is caught by an assert rather than by the file read, so `python -O`
-skips those two checks entirely.
+The assertions carrying a message — version mismatch, skill name/directory
+disagreement, missing description — print it with the traceback.
 
-**Never run it under `python -O`.** Optimization strips the script's `assert`
-statements, disabling its assertion-based invariant checks. File reads, JSON
-parsing, and other ordinary execution still occur and may fail. For otherwise
-readable manifests, however, an invariant that the normal invocation rejects can
-pass unchecked and the script can still print `Marketplace structure: OK`.
-Against a manifest whose `plugin.json` name disagrees with its catalog entry,
-the normal invocation rejects the mismatch while `python3 -O scripts/validate.py`
-prints `Marketplace structure: OK` and exits 0.
-
-There is no test suite, linter, formatter, or CI workflow in this repository;
-`.github/` does not exist. The commands above are the entire verification
-surface. Do not claim broader validation than that.
+**Never run any of them under `python -O`.** That flag strips every assert, and
+these scripts are almost entirely asserts. A missing source *directory* or
+plugin *manifest* is caught by an assert rather than by a file read, so `-O`
+skips those existence checks too. Against a manifest whose `plugin.json` name
+disagrees with its catalog entry — which the normal invocation rejects with exit
+1 — `python3 -O scripts/validate.py` prints `Marketplace structure: OK` and
+exits 0.
 
 ## Versioning
 
-Marketplace and plugin both sit at `1.0.0` today, but they are **two distinct
-version identities** spread over three fields. They are not three copies of one
-number.
+The plugin sits at `1.1.0` and the marketplace at `1.0.0`. They are **two
+distinct version identities** spread over three fields, not three copies of one
+number — and the current values show it.
 
 **Plugin version** — one value, duplicated in two fields that must always match:
 
@@ -282,8 +305,9 @@ number.
 
 Bump it whenever the plugin's distributable behavior changes: a skill added,
 removed, or materially rewritten. Updating one field and not the other leaves
-the catalog advertising a version the plugin manifest does not claim, and
-`validate.py` does not catch it.
+the catalog advertising a version the plugin manifest does not claim.
+`validate.py` now enforces the pair and fails with a message naming both values,
+so a desync breaks CI rather than shipping silently.
 
 **Marketplace version** — the catalog's own version, independent of the plugin:
 
@@ -291,8 +315,8 @@ the catalog advertising a version the plugin manifest does not claim, and
 
 Bump it when the catalog itself changes: a plugin added or removed, marketplace
 metadata reworked. Adding a skill to an existing plugin does not by itself
-require a marketplace bump. The two identities sharing `1.0.0` is a coincidence
-of a single-plugin catalog, not a constraint.
+require a marketplace bump — which is why the plugin has moved to `1.1.0` while
+the marketplace stays at `1.0.0`. Nothing validates this field.
 
 Owner and repo metadata are likewise duplicated across both manifests
 (`canstralian`, `https://github.com/canstralian/rif-runtime`, MIT). Change them
