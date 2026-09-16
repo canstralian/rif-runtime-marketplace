@@ -5,16 +5,36 @@ Guidance for Claude Code when working in this repository.
 ## What this repository is
 
 A **Claude Code plugin marketplace** for the RIF Runtime project. It is a
-distribution catalog — pure JSON manifests and Markdown skill definitions.
-There is no application code, no build step, no test suite, and no runtime here.
+distribution catalog — JSON manifests and Markdown skill definitions. There is
+no application code, no build step, and no runtime here. What testing exists
+validates the catalog's own structure and conformance fixtures, not a product.
 
-The RIF Runtime application itself lives in a **separate** repository
+The RIF Runtime application lives in a **separate** repository
 (`canstralian/rif-runtime`). This separation is intentional: the marketplace
 handles catalog and distribution; the application handles execution. Do not
 import runtime implementation into this repo, and do not assume the runtime's
 source is available when reasoning about a skill.
 
-The only executable file is `scripts/validate.py` (stdlib-only Python 3).
+The code is three stdlib-only Python 3 scripts in `scripts/`, none marked
+executable — run them as `python3 scripts/<name>.py`:
+
+| Script | Purpose |
+|---|---|
+| `validate.py` | Marketplace, plugin, and skill structure |
+| `validate_prompt_ir.py` | PromptIR / PromptBuild conformance over `examples/` |
+| `test_validator.py` | Self-test for the conformance checker |
+
+## Constraints
+
+These five rules change what you do. The rest of this file is reference.
+
+| Rule | Why |
+|---|---|
+| Never deduplicate the ten identical `SKILL.md` bodies | Divergence is the planned direction — [Ten of the twelve skills are intentionally un-specialized](#ten-of-the-twelve-skills-are-intentionally-un-specialized) |
+| Never give a skill a runtime responsibility | Contract §11 — [The Skill Contract](#the-skill-contract) |
+| Never report a check as passing unless it ran | Contract §5 evidence discipline |
+| Move both plugin-version fields together | `validate.py` enforces it — [Versioning](#versioning) |
+| Run all three `scripts/` checks before pushing | CI runs exactly these — [Validation](#validation) |
 
 ## Layout
 
@@ -33,12 +53,19 @@ The only executable file is `scripts/validate.py` (stdlib-only Python 3).
 │   ├── SKILL-CONTRACT.md         # Normative contract every skill must satisfy
 │   └── SKILL-MAPPING.md          # Per-skill boundaries + planned specialization
 ├── scripts/
-│   └── validate.py               # Structural validation of the manifests
+│   ├── validate.py               # Marketplace, plugin, and skill structure
+│   ├── validate_prompt_ir.py     # PromptIR / PromptBuild conformance
+│   └── test_validator.py         # Self-test for the conformance checker
+├── examples/                     # PromptIR documents the conformance check reads
+├── tests/                        # Conformant and non-conformant fixtures
+├── .github/
+│   └── workflows/validate.yml    # CI: runs the three scripts above
+├── .claude/                      # Agent config: hooks, settings, ECC bundle
 ├── LICENSE                       # MIT
 └── README.md
 ```
 
-Three-tier model, and the boundary between tiers is load-bearing:
+Three tiers, and the boundary between them is load-bearing:
 
 | Tier | Artifact | Responsibility |
 |---|---|---|
@@ -46,11 +73,11 @@ Three-tier model, and the boundary between tiers is load-bearing:
 | Plugin | `plugins/<name>/.claude-plugin/plugin.json` | Installable capability boundary |
 | Skill | `plugins/<name>/skills/<skill>/SKILL.md` | One bounded reasoning capability |
 
-Adding a *new capability area* should mean a new plugin, not more skills bolted
-onto `rif-runtime`. The README states this explicitly: keeping the marketplace
-from becoming a monolith is a design goal.
+A new capability *area* means a new plugin, not more skills bolted onto
+`rif-runtime`. The README names this explicitly: keeping the marketplace from
+becoming a monolith is a design goal.
 
-## The ten skills
+## The twelve skills
 
 All live under `plugins/rif-runtime/skills/` and are invoked namespaced as
 `/rif-runtime:<skill-name>`.
@@ -67,63 +94,68 @@ All live under `plugins/rif-runtime/skills/` and are invoked namespaced as
 | `replay-analysis` | Trace reproducibility, explainability, reconciliation |
 | `documentation-engine` | Validated implementation/decisions → documentation |
 | `release-manager` | Versioning, regression risk, release readiness |
+| `prompt-audit` | PromptIR / PromptBuild conformance auditing |
+| `prompt-compiler` | PromptIR compilation into PromptBuild output |
 
 `rif-runtime` and `run-rif-runtime` are deliberately distinct — understanding
 versus execution — and must not collapse into each other.
 
-## Current state: skills are intentionally un-specialized
+## Ten of the twelve skills are intentionally un-specialized
 
 **Read this before editing any `SKILL.md`.**
 
-All ten skill files are currently byte-identical from the `## Operating
-principles` heading onward. They differ only in:
+`prompt-audit` and `prompt-compiler` are specialized: each follows the
+reference template in `docs/SKILL-CONTRACT.md`, with `## Purpose`,
+`## Scope boundary`, `## Inputs`, `## Preconditions`, and the rest. They are the
+model for what the other ten should become.
+
+The other ten skill files are byte-identical from the `## Operating principles`
+heading onward. They differ only in:
 
 - YAML frontmatter (`name`, `description`),
 - the `# Title` heading,
 - the "You are operating as the `<name>` capability" line.
 
-This is a known, documented state — not an oversight and not something to
-"clean up" by deduplicating. `docs/SKILL-MAPPING.md` records it under
-**"Immediate specialization requirements"** and specifies, per skill, the
+This is a documented state, not an oversight. `docs/SKILL-MAPPING.md` records it
+under **"Immediate specialization requirements"** and specifies, per skill, the
 capability-specific criteria that should replace the shared generic workflow.
-
-So:
+The two specialized skills show that this work has started.
 
 - **Do not** factor the shared body into an include or a common file. The
   intended direction is divergence, not deduplication.
 - **Do** consult the matching section of `docs/SKILL-MAPPING.md` when asked to
-  improve a skill — the required checks are already enumerated there.
+  improve a skill — the required checks are enumerated there.
 - **Do** preserve the common contract (evidence discipline, output discipline,
   scope boundary) while specializing the analysis.
 
 ## The Skill Contract
 
-`docs/SKILL-CONTRACT.md` is normative for anything under `skills/`. Its rules
-that most often get violated by well-meaning edits:
+`docs/SKILL-CONTRACT.md` is normative for anything under `skills/`. Well-meaning
+edits break these rules most often:
 
 **Evidence discipline (§5).** Every claim must be classifiable as *observed*,
 *repository fact*, *derived*, or *inference*. Never assert that a validation,
-test, or execution succeeded unless it actually ran. Insufficient evidence must
-be reported as such, not filled in.
+test, or execution succeeded unless it ran. Report insufficient evidence as
+insufficient; do not fill the gap.
 
 **Runtime integration boundary (§11).** The runtime — not a skill — owns
 orchestration, mode selection, context construction, governance enforcement,
 budget accounting, capability gating, provider/model routing, scheduling,
 execution, evidence persistence, telemetry, replay, and durable state. A skill
-may *recommend* or *report*; it must never duplicate authoritative runtime state
-or bypass runtime governance. New skill text that starts owning any of that
-list is a contract violation.
+may *recommend* or *report*. It must never duplicate authoritative runtime state
+or bypass runtime governance. Skill text that claims anything on that list
+violates the contract.
 
-**Scope boundary (§2).** Each skill must say what it does *not* own.
+**Scope boundary (§2).** Each skill must state what it does *not* own.
 
-**Graded outcomes (§7).** Prefer `pass` / `fail` / `conditional` /
-`insufficient evidence` / `not applicable` over forced binaries.
+**Graded outcomes (§7).** Use `pass` / `fail` / `conditional` /
+`insufficient evidence` / `not applicable` instead of forcing a binary.
 
 **Evolution (§14).** Changing a capability materially means updating its
-contract and version — not silently widening scope.
+contract and version, not silently widening scope.
 
-§ "Reference template" at the end of `SKILL-CONTRACT.md` is the canonical shape
-for a specialized skill. Use it verbatim as the section skeleton when writing one.
+The "Reference template" section at the end of `SKILL-CONTRACT.md` is the
+canonical shape for a specialized skill. Use it verbatim as the section skeleton.
 
 ## The shared runtime mental model
 
@@ -137,8 +169,7 @@ Capability gates → Execution → Evidence ledger → Telemetry →
 Replay → Documentation
 ```
 
-When a task crosses these boundaries, name the affected stages and invariants
-explicitly.
+When a task crosses these boundaries, name the affected stages and invariants.
 
 ## Conventions
 
@@ -155,16 +186,23 @@ description: Review RIF Runtime architecture for structural integrity, boundarie
 single sentence stating the capability and its decision boundary — it names a
 capability, never a model, provider, or implementation detail.
 
-Note the apparent conflict with `SKILL-CONTRACT.md` §1, which lists `name`,
+`SKILL-CONTRACT.md` §1 appears to conflict with this: it lists `name`,
 `description`, `version`, and `scope` as things a skill must declare. The
-contract's own reference template resolves it: frontmatter carries `name` and
-`description`, `scope` is declared in the body as `## Scope boundary`, and
-`version` is qualified "when versioning is introduced" — which has not happened
-yet. All ten current skills carry exactly two frontmatter keys. Follow the
-reference template, not a literal reading of §1.
+contract's own reference template resolves it. Frontmatter carries `name` and
+`description` only; the template declares `scope` in the body under a
+`## Scope boundary` heading, and qualifies `version` as "when versioning is
+introduced", which has not happened. All twelve skills carry exactly two
+frontmatter keys, and `validate.py` enforces `name` and a non-empty
+`description`. Follow the reference template, not a literal reading of §1.
 
-**Directory naming.** Lowercase kebab-case; directory name, frontmatter `name`,
-and the invocation `/rif-runtime:<name>` are always the same string.
+The ten un-specialized skills do **not** carry a `## Scope boundary` section —
+their shared body runs `## Operating principles`, `## Workflow`, `## RIF Runtime
+mental model`, `## Output discipline`, and nothing else. That is part of the
+un-specialized state described above, not a pattern to copy. `prompt-audit` and
+`prompt-compiler` do carry it, and are the pattern to follow.
+
+**Directory naming.** Lowercase kebab-case. The directory name, frontmatter
+`name`, and the invocation `/rif-runtime:<name>` are always the same string.
 
 **Output discipline.** Skills instruct: *Assumptions → Decision →
 Recommendation → Trade-offs → Validation*. The fuller contract output shape
@@ -174,8 +212,8 @@ Trade-offs / Validation / Unresolved questions.
 **Markdown.** Fenced code blocks carry a language tag (`text` for diagrams and
 directory trees). Documents lead with a `#` H1.
 
-**Python.** `scripts/validate.py` is stdlib-only with no dependencies. Keep it
-that way — there is no `requirements.txt`, no lockfile, and nothing to install.
+**Python.** `scripts/validate.py` is stdlib-only. Keep it that way — there is no
+`requirements.txt`, no lockfile, and nothing to install.
 
 ## Adding a skill
 
@@ -187,24 +225,27 @@ that way — there is no `requirements.txt`, no lockfile, and nothing to install
    declared boundary.
 4. Add the `/rif-runtime:<skill-name>` line to the README's skill list and the
    directory to the README's tree.
-5. Bump the plugin version — a new skill changes distributable behavior. This
-   value lives in **two** places that must move together:
+5. Bump the plugin version — a new skill changes distributable behavior. That
+   value lives in **two** fields that must move together:
    `plugins/rif-runtime/.claude-plugin/plugin.json` → `version`, and
    `.claude-plugin/marketplace.json` → `plugins[0].version`. See
    [Versioning](#versioning).
-6. Run validation (below).
-
-Note that `scripts/validate.py` does **not** currently check skills at all — it
-validates only the marketplace/plugin manifest wiring. Skill frontmatter,
-name/directory agreement, and README consistency are unenforced and must be
-checked by hand.
+6. Run validation (below), then hand-check steps 2–5 — the validator covers
+   none of them.
 
 ## Validation
 
+CI runs these three from the repository root on every push and pull request
+(`.github/workflows/validate.yml`). Run them yourself before pushing:
+
 ```bash
-python3 scripts/validate.py     # manifest structure; prints "Marketplace structure: OK"
-claude plugin validate .        # full Claude Code marketplace validation
+python3 scripts/validate.py                        # prints "Marketplace structure: OK (12 skills)"
+python3 scripts/validate_prompt_ir.py --strict examples/
+python3 scripts/test_validator.py
 ```
+
+`claude plugin validate .` additionally runs the full Claude Code marketplace
+validation, which CI does not.
 
 Local install test from inside Claude Code:
 
@@ -213,44 +254,88 @@ Local install test from inside Claude Code:
 /plugin install rif-runtime@rif-runtime-marketplace
 ```
 
-There is no test suite, linter, formatter, or CI workflow in this repository —
-`.github/` does not exist. The two commands above are the entire verification
-surface. Don't claim broader validation than that.
+**What `validate.py` checks.** The marketplace name, owner type, and a non-empty
+plugin list; that each catalog entry has a non-empty `name`; that each
+`plugins[].source` directory exists and contains `.claude-plugin/plugin.json`;
+that each plugin manifest's `name` **and `version`** match its catalog entry; and,
+for every skill directory, that `SKILL.md` exists, has YAML frontmatter, has a
+`name` matching its directory, and has a non-empty `description`. It prints the
+skill count it validated.
+
+**What it still does not check.** Verify these by hand:
+
+- Skill *body* structure. Frontmatter is parsed; the body is not. Nothing
+  enforces the reference template or the output contract.
+- README consistency with the skill list or directory tree.
+- The top-level marketplace `version` — only the plugin version pair is
+  compared.
+
+**What failure looks like.** Every failure is an unhandled traceback and a
+non-zero exit, never a purpose-built diagnostic. Which exception you get depends
+on where the script gives up:
+
+| Broken input | Exception |
+|---|---|
+| `.claude-plugin/marketplace.json` missing | `FileNotFoundError` — it is read before the first assert |
+| Malformed JSON in either manifest | `json.decoder.JSONDecodeError` |
+| Missing `name`, `owner`, or `plugins` key | `KeyError` |
+| Empty plugin list or entry `name`, missing source directory, missing `plugin.json`, name or version mismatch, missing or malformed `SKILL.md` frontmatter | `AssertionError` |
+
+The assertions carrying a message — version mismatch, skill name/directory
+disagreement, missing description — print it with the traceback.
+
+**Never run any of them under `python -O`.** That flag strips every assert, and
+these scripts are almost entirely asserts. A missing source *directory* or
+plugin *manifest* is caught by an assert rather than by a file read, so `-O`
+skips those existence checks too. Against a manifest whose `plugin.json` name
+disagrees with its catalog entry — which the normal invocation rejects with exit
+1 — `python3 -O scripts/validate.py` prints `Marketplace structure: OK` and
+exits 0.
+
+**The `PYTHONOPTIMIZE` environment variable does the same thing silently.** It
+needs no flag on the command line, so a validator invoked from a script or CI
+step inherits it and reports a false pass. Anything that runs these scripts
+unattended should invoke `python3 -E`, which ignores `PYTHON*` variables;
+`.claude/hooks/session-start.sh` does. Confirmed: with `PYTHONOPTIMIZE=1` a
+version desync prints `Marketplace structure: OK (12 skills)` and exits 0, while
+`python3 -E` fails it correctly.
 
 ## Versioning
 
-Marketplace and plugin both sit at `1.0.0` today, but they are **two distinct
-version identities** spread over three fields. Do not treat them as three
-copies of one number.
+The plugin sits at `1.1.0` and the marketplace at `1.0.0`. They are **two
+distinct version identities** spread over three fields, not three copies of one
+number — and the current values show it.
 
 **Plugin version** — one value, duplicated in two fields that must always match:
 
 - `plugins/rif-runtime/.claude-plugin/plugin.json` → `version`
 - `.claude-plugin/marketplace.json` → `plugins[0].version`
 
-Bump it whenever the plugin's distributable behavior changes (skill added,
-removed, or materially rewritten). Updating one field and not the other leaves
+Bump it whenever the plugin's distributable behavior changes: a skill added,
+removed, or materially rewritten. Updating one field and not the other leaves
 the catalog advertising a version the plugin manifest does not claim.
+`validate.py` now enforces the pair and fails with a message naming both values,
+so a desync breaks CI rather than shipping silently.
 
 **Marketplace version** — the catalog's own version, independent of the plugin:
 
 - `.claude-plugin/marketplace.json` → top-level `version`
 
-Bump it when the catalog itself changes (a plugin added or removed, marketplace
-metadata reworked). Adding a skill to an existing plugin does not by itself
-require a marketplace bump. The two identities sharing `1.0.0` right now is a
-coincidence of a single-plugin catalog, not a constraint.
+Bump it when the catalog itself changes: a plugin added or removed, marketplace
+metadata reworked. Adding a skill to an existing plugin does not by itself
+require a marketplace bump — which is why the plugin has moved to `1.1.0` while
+the marketplace stays at `1.0.0`. Nothing validates this field.
 
-Owner/repo metadata is likewise duplicated across both manifests
-(`canstralian`, `https://github.com/canstralian/rif-runtime`, MIT). Change it in
-both or neither.
+Owner and repo metadata are likewise duplicated across both manifests
+(`canstralian`, `https://github.com/canstralian/rif-runtime`, MIT). Change them
+in both or neither.
 
 ## Working style in this repo
 
-- Changes are small, documentation-shaped, and reviewable. Match the existing
-  measured, specification-like prose in `docs/` — it is deliberate, not verbose.
-- Commit messages follow Conventional Commits (`docs:`, `feat:`), as in
+- Keep changes small, documentation-shaped, and reviewable. Match the measured,
+  specification-like prose in `docs/` — it is deliberate, not verbose.
+- Follow Conventional Commits (`docs:`, `feat:`), as in
   `docs: define RIF skill contract`.
 - Nothing here executes at review time. Any statement about runtime behavior is
-  a claim about the *other* repository and should be labeled as inference unless
-  that source was actually inspected.
+  a claim about the *other* repository. Label it as inference unless you
+  inspected that source.
