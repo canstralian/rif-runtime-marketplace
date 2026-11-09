@@ -1,6 +1,6 @@
 ---
 name: rif-runtime
-description: Operate as the general RIF Runtime engineering skill: understand the runtime architecture, execution lifecycle, governance, evidence, telemetry, and evolution model.
+description: "Operate as the general RIF Runtime engineering skill: understand the runtime architecture, execution lifecycle, governance, evidence, telemetry, and evolution model."
 ---
 
 # Rif Runtime
