@@ -88,7 +88,10 @@ Three tiers, and the boundary between them is load-bearing:
 
 A new capability *area* means a new plugin, not more skills bolted onto
 `rif-runtime`. The README names this explicitly: keeping the marketplace from
-becoming a monolith is a design goal.
+becoming a monolith is a design goal. A new plugin needs a `skills/` directory
+from its first commit, even an empty one: `validate.py` iterates that path
+without checking it exists, so a plugin without it fails with a
+`FileNotFoundError` rather than a diagnostic.
 
 ## The twelve skills
 
@@ -205,8 +208,8 @@ contract's own reference template resolves it. Frontmatter carries `name` and
 `description` only; the template declares `scope` in the body under a
 `## Scope boundary` heading, and qualifies `version` as "when versioning is
 introduced", which has not happened. All twelve skills carry exactly two
-frontmatter keys, and `validate.py` enforces `name` and a non-empty
-`description`. Follow the reference template, not a literal reading of §1.
+frontmatter keys, and `validate.py` enforces an unquoted `name` matching the
+directory and a `description` with text after the colon. Follow the reference template, not a literal reading of §1.
 
 The ten un-specialized skills do **not** carry a `## Scope boundary` section —
 their shared body runs `## Operating principles`, `## Workflow`, `## RIF Runtime
@@ -252,14 +255,19 @@ which has its own `package.json` and npm dependencies.
 
 ## Validation
 
-`.github/workflows/validate.yml` runs these three from the repository root on
-every push and pull request. Run them yourself before pushing:
+`.github/workflows/validate.yml` runs these three scripts from the repository
+root on every push and pull request. Run them yourself before pushing:
 
 ```bash
-python3 scripts/validate.py                        # prints "Marketplace structure: OK (12 skills)"
+python3 -E scripts/validate.py                     # prints "Marketplace structure: OK (12 skills)"
 python3 scripts/validate_prompt_ir.py --strict examples/
 python3 scripts/test_validator.py
 ```
+
+CI invokes `validate.py` without `-E`; the flag is here because a local shell
+can carry an inherited `PYTHONOPTIMIZE`, which fakes a pass — see below. The
+other two scripts contain no `assert` statements, so the flag changes nothing
+for them.
 
 `claude plugin validate .` additionally runs the full Claude Code marketplace
 validation, which CI does not.
@@ -281,14 +289,24 @@ Local install test from inside Claude Code:
 plugin list; that each catalog entry has a non-empty `name`; that each
 `plugins[].source` directory exists and contains `.claude-plugin/plugin.json`;
 that each plugin manifest's `name` **and `version`** match its catalog entry; and,
-for every skill directory, that `SKILL.md` exists, has YAML frontmatter, has a
-`name` matching its directory, and has a non-empty `description`. It prints the
-skill count it validated.
+for every skill directory, that `SKILL.md` exists, opens with a `---` fenced
+frontmatter block, and carries a `name` matching its directory and a
+`description` with text after the colon. It prints the skill count it validated.
+
+Those last two are **raw-text** comparisons, not YAML ones: the script matches
+`^(\w+):\s*(.+)$` against the frontmatter lines and never parses them. So the
+`name` must equal the directory name *as written* — `name: "architecture-review"`
+fails against directory `architecture-review`, because the quotes are part of
+the matched string. Keep frontmatter unquoted, as the convention above shows.
 
 **What it still does not check.** Verify these by hand:
 
-- Skill *body* structure. Frontmatter is parsed; the body is not. Nothing
-  enforces the reference template or the output contract.
+- Skill *body* structure. Frontmatter is matched line by line; the body is not
+  read at all. Nothing enforces the reference template or the output contract.
+- That the frontmatter is valid YAML, or that `description` decodes to anything.
+  Confirmed: both `description: ""` and an unterminated `description: "Review…`
+  pass, because two quote characters and an unclosed quote are both non-empty
+  raw text. Read the frontmatter yourself.
 - README consistency with the skill list or directory tree.
 - The top-level marketplace `version` — only the plugin version pair is
   compared.
@@ -300,6 +318,7 @@ on where the script gives up:
 | Broken input | Exception |
 |---|---|
 | `.claude-plugin/marketplace.json` missing | `FileNotFoundError` — it is read before the first assert |
+| A catalog plugin whose source directory has no `skills/` | `FileNotFoundError` — `skills/` is iterated, never existence-checked |
 | Malformed JSON in either manifest | `json.decoder.JSONDecodeError` |
 | Missing `name`, `owner`, or `plugins` key | `KeyError` |
 | Empty plugin list or entry `name`, missing source directory, missing `plugin.json`, name or version mismatch, missing or malformed `SKILL.md` frontmatter | `AssertionError` |
