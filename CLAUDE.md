@@ -4,10 +4,19 @@ Guidance for Claude Code when working in this repository.
 
 ## What this repository is
 
-A **Claude Code plugin marketplace** for the RIF Runtime project. It is a
-distribution catalog — JSON manifests and Markdown skill definitions. There is
-no application code, no build step, and no runtime here. What testing exists
-validates the catalog's own structure and conformance fixtures, not a product.
+A **Claude Code plugin marketplace** for the RIF Runtime project. Its core is a
+distribution catalog — JSON manifests and Markdown skill definitions — and the
+RIF Runtime itself does not run here. Two things sit alongside the catalog and
+are easy to miss:
+
+- `web/` — "forge-exchange-web", a React 19 + Vite + TypeScript site with a real
+  build (`npm run build` → `tsc --noEmit && vite build`) and npm dependencies,
+  deployed to GitHub Pages by `.github/workflows/pages.yml`.
+- `schemas/` — JSON Schemas for PromptIR and PromptBuild.
+
+So "no build step" is no longer true of the repository, only of the catalog.
+What testing exists validates the catalog's structure and the conformance
+fixtures, not a product.
 
 The RIF Runtime application lives in a **separate** repository
 (`canstralian/rif-runtime`). This separation is intentional: the marketplace
@@ -15,7 +24,7 @@ handles catalog and distribution; the application handles execution. Do not
 import runtime implementation into this repo, and do not assume the runtime's
 source is available when reasoning about a skill.
 
-The code is three stdlib-only Python 3 scripts in `scripts/`, none marked
+The Python code is three stdlib-only scripts in `scripts/`, none marked
 executable — run them as `python3 scripts/<name>.py`:
 
 | Script | Purpose |
@@ -34,7 +43,7 @@ These five rules change what you do. The rest of this file is reference.
 | Never give a skill a runtime responsibility | Contract §11 — [The Skill Contract](#the-skill-contract) |
 | Never report a check as passing unless it ran | Contract §5 evidence discipline |
 | Move both plugin-version fields together | `validate.py` enforces it — [Versioning](#versioning) |
-| Run all three `scripts/` checks before pushing | CI runs exactly these — [Validation](#validation) |
+| Run all three `scripts/` checks before pushing | `validate.yml` runs exactly these — [Validation](#validation) |
 
 ## Layout
 
@@ -58,8 +67,12 @@ These five rules change what you do. The rest of this file is reference.
 │   └── test_validator.py         # Self-test for the conformance checker
 ├── examples/                     # PromptIR documents the conformance check reads
 ├── tests/                        # Conformant and non-conformant fixtures
+├── schemas/                      # JSON Schemas for PromptIR and PromptBuild
+├── web/                          # forge-exchange-web: React + Vite site (has its own build)
 ├── .github/
-│   └── workflows/validate.yml    # CI: runs the three scripts above
+│   └── workflows/
+│       ├── validate.yml          # CI: the three scripts above
+│       └── pages.yml             # CI: builds web/ and deploys to GitHub Pages
 ├── .claude/                      # Agent config: hooks, settings, ECC bundle
 ├── LICENSE                       # MIT
 └── README.md
@@ -212,8 +225,9 @@ Trade-offs / Validation / Unresolved questions.
 **Markdown.** Fenced code blocks carry a language tag (`text` for diagrams and
 directory trees). Documents lead with a `#` H1.
 
-**Python.** `scripts/validate.py` is stdlib-only. Keep it that way — there is no
-`requirements.txt`, no lockfile, and nothing to install.
+**Python.** The `scripts/` checks are stdlib-only. Keep them that way — there is
+no `requirements.txt` and no Python lockfile. This says nothing about `web/`,
+which has its own `package.json` and npm dependencies.
 
 ## Adding a skill
 
@@ -230,13 +244,16 @@ directory trees). Documents lead with a `#` H1.
    `plugins/rif-runtime/.claude-plugin/plugin.json` → `version`, and
    `.claude-plugin/marketplace.json` → `plugins[0].version`. See
    [Versioning](#versioning).
-6. Run validation (below), then hand-check steps 2–5 — the validator covers
-   none of them.
+6. Run validation (below). `validate.py` covers **part** of this list: step 2's
+   `SKILL.md` existence, frontmatter presence, `name`/directory agreement, and a
+   non-empty `description`; and step 5's version pair. It does **not** cover the
+   body structure in step 2, the mapping entry in step 3, or the README edits in
+   step 4 — hand-check those.
 
 ## Validation
 
-CI runs these three from the repository root on every push and pull request
-(`.github/workflows/validate.yml`). Run them yourself before pushing:
+`.github/workflows/validate.yml` runs these three from the repository root on
+every push and pull request. Run them yourself before pushing:
 
 ```bash
 python3 scripts/validate.py                        # prints "Marketplace structure: OK (12 skills)"
@@ -246,6 +263,12 @@ python3 scripts/test_validator.py
 
 `claude plugin validate .` additionally runs the full Claude Code marketplace
 validation, which CI does not.
+
+A second workflow, `.github/workflows/pages.yml`, builds `web/` — `npm install`
+then `npm run build` (`tsc --noEmit && vite build`) — on any change under
+`web/`, and deploys to GitHub Pages on `master`. None of the `scripts/` checks
+touch `web/`, and the Pages build does not touch the catalog. If you change
+`web/`, build it yourself; `validate.py` passing says nothing about it.
 
 Local install test from inside Claude Code:
 

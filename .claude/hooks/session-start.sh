@@ -1,12 +1,16 @@
 #!/bin/bash
 # SessionStart hook for rif-runtime-marketplace.
 #
-# This repository has no dependencies to install: no package.json, no
-# requirements.txt, no lockfile. The only code is scripts/validate.py, which
-# imports json and pathlib from the standard library. So this hook installs
-# nothing. It confirms the one assumption the repo makes (python3 on PATH) and
-# runs the repo's only verification command, so a web session starts knowing
-# whether the marketplace manifests are structurally sound.
+# This hook installs nothing. The catalog's own checks are three stdlib-only
+# Python scripts in scripts/ with no requirements.txt and no Python lockfile, so
+# there is nothing to install for them. It confirms python3 is on PATH and runs
+# scripts/validate.py, so a web session starts knowing whether the marketplace
+# manifests are structurally sound.
+#
+# It deliberately does NOT cover web/, which is a separate React + Vite app with
+# its own package.json and npm dependencies, built by .github/workflows/pages.yml.
+# Installing those here would add an npm install to every session start for work
+# most sessions never touch. A session working on web/ installs them itself.
 #
 # It always exits 0. A broken manifest must not block the session that would
 # fix it; the failure is reported into the session instead.
