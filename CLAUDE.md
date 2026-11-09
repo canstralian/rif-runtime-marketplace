@@ -89,9 +89,10 @@ Three tiers, and the boundary between them is load-bearing:
 A new capability *area* means a new plugin, not more skills bolted onto
 `rif-runtime`. The README names this explicitly: keeping the marketplace from
 becoming a monolith is a design goal. A new plugin needs a `skills/` directory
-from its first commit, even an empty one: `validate.py` iterates that path
-without checking it exists, so a plugin without it fails with a
-`FileNotFoundError` rather than a diagnostic.
+from its first commit, even one holding nothing but a tracked `.gitkeep`:
+`validate.py` iterates that path without checking it exists, so a plugin
+without it fails with a `FileNotFoundError` rather than a diagnostic. A plugin
+that ships only agents or hooks still needs the directory.
 
 ## The twelve skills
 

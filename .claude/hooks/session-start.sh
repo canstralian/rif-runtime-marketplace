@@ -22,7 +22,10 @@ if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
   exit 0
 fi
 
-cd "${CLAUDE_PROJECT_DIR:-.}" || exit 0
+if ! cd "${CLAUDE_PROJECT_DIR:-.}"; then
+  echo "session-start: cannot enter the project directory; skipping manifest validation."
+  exit 0
+fi
 
 if ! command -v python3 >/dev/null 2>&1; then
   echo "session-start: python3 not on PATH; scripts/validate.py cannot run."
