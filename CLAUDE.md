@@ -249,8 +249,9 @@ which has its own `package.json` and npm dependencies.
    `.claude-plugin/marketplace.json` → `plugins[0].version`. See
    [Versioning](#versioning).
 6. Run validation (below). `validate.py` covers **part** of this list: step 2's
-   `SKILL.md` existence, frontmatter presence, `name`/directory agreement, and a
-   non-empty `description`; and step 5's version pair. It does **not** cover the
+   `SKILL.md` existence, frontmatter presence, `name`/directory agreement as
+   written, and a `description` field with non-empty raw text — not a decoded
+   YAML value; and step 5's version pair. It does **not** cover the
    body structure in step 2, the mapping entry in step 3, or the README edits in
    step 4 — hand-check those.
 
