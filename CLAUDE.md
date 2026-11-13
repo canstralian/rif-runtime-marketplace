@@ -54,7 +54,8 @@ These five rules change what you do. The rest of this file is reference.
 ├── plugins/
 │   └── rif-runtime/
 │       ├── .claude-plugin/
-│       │   └── plugin.json       # Plugin manifest
+│       │   ├── plugin.json       # Plugin manifest
+│       │   └── icon.png          # Plugin icon
 │       └── skills/
 │           └── <skill-name>/
 │               └── SKILL.md      # One directory per skill
@@ -199,9 +200,12 @@ description: Review RIF Runtime architecture for structural integrity, boundarie
 ---
 ```
 
-`name` **must** match the containing directory name exactly. `description` is a
-single sentence stating the capability and its decision boundary — it names a
-capability, never a model, provider, or implementation detail.
+`name` **must** match the containing directory name exactly, and unquoted —
+`validate.py` compares it as raw text. `description` is a single sentence
+stating the capability and its decision boundary — it names a capability, never
+a model, provider, or implementation detail. Quote the description if it
+contains `: `, as `rif-runtime`'s does; unquoted, such a line is invalid YAML
+and no check in this repository catches it.
 
 `SKILL-CONTRACT.md` §1 appears to conflict with this: it lists `name`,
 `description`, `version`, and `scope` as things a skill must declare. The
@@ -299,7 +303,15 @@ Those last two are **raw-text** comparisons, not YAML ones: the script matches
 `^(\w+):\s*(.+)$` against the frontmatter lines and never parses them. So the
 `name` must equal the directory name *as written* — `name: "architecture-review"`
 fails against directory `architecture-review`, because the quotes are part of
-the matched string. Keep frontmatter unquoted, as the convention above shows.
+the matched string. So `name` is always unquoted.
+
+`description` is the opposite case, and the rule is not "unquoted": quote it
+whenever its text contains a colon followed by a space, or any other character
+YAML reads as structure. `rif-runtime`'s description does (`…engineering
+skill: understand…`), and unquoted it is **not valid YAML** — `yaml.safe_load`
+raises `ScannerError` on it, because a plain scalar cannot contain `: `. It sat
+in the tree that way until master quoted it. `validate.py` never noticed, in
+either state, because it does not parse YAML — see below.
 
 **What it still does not check.** Verify these by hand:
 
@@ -308,7 +320,10 @@ the matched string. Keep frontmatter unquoted, as the convention above shows.
 - That the frontmatter is valid YAML, or that `description` decodes to anything.
   Confirmed: both `description: ""` and an unterminated `description: "Review…`
   pass, because two quote characters and an unclosed quote are both non-empty
-  raw text. Read the frontmatter yourself.
+  raw text. This is not hypothetical — `rif-runtime/SKILL.md` carried an
+  unquoted description containing `: `, which `yaml.safe_load` rejects, and
+  `validate.py` reported `OK` on every run until master quoted it. Read the
+  frontmatter yourself, or parse it.
 - README consistency with the skill list or directory tree.
 - The top-level marketplace `version` — only the plugin version pair is
   compared.
