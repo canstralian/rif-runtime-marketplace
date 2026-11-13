@@ -1,4 +1,12 @@
 {
+  "permissions": {
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(sudo *)",
+      "Bash(chmod 777 *)",
+      "Bash(ssh *)"
+    ]
+  },
   "hooks": {
     "SessionStart": [
       {

@@ -61,7 +61,8 @@ These five rules change what you do. The rest of this file is reference.
 │               └── SKILL.md      # One directory per skill
 ├── docs/
 │   ├── SKILL-CONTRACT.md         # Normative contract every skill must satisfy
-│   └── SKILL-MAPPING.md          # Per-skill boundaries + planned specialization
+│   ├── SKILL-MAPPING.md          # Per-skill boundaries + planned specialization
+│   └── adr/                      # Architecture decision records
 ├── scripts/
 │   ├── validate.py               # Marketplace, plugin, and skill structure
 │   ├── validate_prompt_ir.py     # PromptIR / PromptBuild conformance
@@ -74,7 +75,7 @@ These five rules change what you do. The rest of this file is reference.
 │   └── workflows/
 │       ├── validate.yml          # CI: the three scripts above
 │       └── pages.yml             # CI: builds web/ and deploys to GitHub Pages
-├── .claude/                      # Agent config: hooks, settings, ECC bundle
+├── .claude/                      # Agent config: hooks, permissions, ECC bundle
 ├── LICENSE                       # MIT
 └── README.md
 ```
