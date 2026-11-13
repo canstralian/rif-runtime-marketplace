@@ -8,12 +8,38 @@ The contract is designed to prevent skill drift, duplicated orchestration logic,
 
 ## 1. Skill identity
 
-Every skill MUST declare:
+A skill is identified by four fields. They do not all live in the same place,
+and only two are machine-checked.
 
-- `name`: stable identifier matching its directory and frontmatter name.
-- `description`: concise statement of the capability and its decision boundary.
-- `version`: skill contract version or compatible contract range when versioning is introduced.
-- `scope`: the runtime concern the skill owns.
+| Field | Where it is declared | Status |
+|---|---|---|
+| `name` | YAML frontmatter | Required. `scripts/validate.py` compares it to the containing directory name |
+| `description` | YAML frontmatter | Required. `scripts/validate.py` checks that text follows the colon |
+| `scope` | Body, under a `## Scope boundary` heading (§2) | Required. Ten skills do not yet carry it — see `SKILL-MAPPING.md` |
+| `version` | Not declared anywhere yet | Deferred until skill versioning is introduced |
+
+Frontmatter therefore carries exactly two keys today:
+
+```yaml
+---
+name: architecture-review
+description: Review RIF Runtime architecture for structural integrity, boundaries, coupling, failure modes, and evolution risks.
+---
+```
+
+**Write `name` unquoted.** `validate.py` compares the raw text after `name:` to
+the directory name, so `name: "architecture-review"` fails against directory
+`architecture-review` — the quotes are part of the compared string.
+
+**Quote `description` when its text contains a colon followed by a space.** A
+plain YAML scalar cannot hold one, so this is not valid YAML:
+
+```yaml
+description: Operate as the general RIF Runtime engineering skill: understand the runtime architecture.
+```
+
+`validate.py` does not parse YAML and reports `OK` on that line. A loader does
+not: `yaml.safe_load` raises `ScannerError`. Quote the value instead.
 
 The skill name MUST describe a capability, not a model, provider, implementation detail, or transient workflow.
 

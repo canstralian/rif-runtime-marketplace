@@ -208,14 +208,10 @@ a model, provider, or implementation detail. Quote the description if it
 contains `: `, as `rif-runtime`'s does; unquoted, such a line is invalid YAML
 and no check in this repository catches it.
 
-`SKILL-CONTRACT.md` §1 appears to conflict with this: it lists `name`,
-`description`, `version`, and `scope` as things a skill must declare. The
-contract's own reference template resolves it. Frontmatter carries `name` and
-`description` only; the template declares `scope` in the body under a
-`## Scope boundary` heading, and qualifies `version` as "when versioning is
-introduced", which has not happened. All twelve skills carry exactly two
-frontmatter keys, and `validate.py` enforces an unquoted `name` matching the
-directory and a `description` with text after the colon. Follow the reference template, not a literal reading of §1.
+`SKILL-CONTRACT.md` §1 is the normative source for the four identity fields:
+which of them live in frontmatter, which lives in the body, which is deferred,
+and which two `validate.py` actually checks. It used to read as though all four
+belonged in frontmatter; it no longer does.
 
 The ten un-specialized skills do **not** carry a `## Scope boundary` section —
 their shared body runs `## Operating principles`, `## Workflow`, `## RIF Runtime
