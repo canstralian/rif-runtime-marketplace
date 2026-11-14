@@ -62,6 +62,7 @@ These five rules change what you do. The rest of this file is reference.
 ├── docs/
 │   ├── SKILL-CONTRACT.md         # Normative contract every skill must satisfy
 │   ├── SKILL-MAPPING.md          # Per-skill boundaries + planned specialization
+│   ├── spec-kit/                 # Security profile, skill template, self-assessment
 │   └── adr/                      # Architecture decision records
 ├── scripts/
 │   ├── validate.py               # Marketplace, plugin, and skill structure
@@ -175,6 +176,20 @@ contract and version, not silently widening scope.
 
 The "Reference template" section at the end of `SKILL-CONTRACT.md` is the
 canonical shape for a specialized skill. Use it verbatim as the section skeleton.
+
+**Spec kit (`docs/spec-kit/`).** `PROFILE.md` adds security requirements on top
+of the contract: authority tiers, six hard blocks, and a defense for each of
+injection vectors A to I. `TEMPLATE.md` is the contract skeleton plus the two
+sections that profile adds (`## Authority and trust`, `## Hard blocks`).
+`ASSESSMENT.md` scores the twelve skills strictly and, as of its stated commit,
+finds all of them `SECURITY_FAIL`. Three things to remember:
+
+- No skill has adopted the profile. Adopting it edits a skill, which is a
+  material change (§14) and bumps both plugin-version fields.
+- Its verdict words (`GREENLIGHT`, `CONDITIONAL`, `SECURITY_FAIL`) grade a
+  skill's *specification*. The §7 outcomes grade a skill's *subject*. Never
+  put the first set in a skill's output statuses.
+- It is a self-assessment. Do not cite it as an independent verdict.
 
 ## The shared runtime mental model
 
