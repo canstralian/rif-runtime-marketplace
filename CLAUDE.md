@@ -276,10 +276,23 @@ for them.
 validation, which CI does not.
 
 A second workflow, `.github/workflows/pages.yml`, builds `web/` — `npm install`
-then `npm run build` (`tsc --noEmit && vite build`) — on any change under
-`web/`, and deploys to GitHub Pages on `master`. None of the `scripts/` checks
-touch `web/`, and the Pages build does not touch the catalog. If you change
-`web/`, build it yourself; `validate.py` passing says nothing about it.
+then `npm run build` (`tsc --noEmit && vite build`). What it does depends on the
+trigger:
+
+| Trigger | Builds | Deploys to GitHub Pages |
+|---|---|---|
+| Pull request touching `web/**` or the workflow file | Yes | No |
+| Push to `master` touching those paths | Yes | Yes |
+| Manual `workflow_dispatch`, from **any** branch | Yes | **Yes** — the `deploy` job gates on "not a pull request", not on the branch |
+
+So a manual dispatch from a feature branch publishes that branch's `web/`. Whether
+the `github-pages` environment restricts deployment branches is a GitHub setting
+this repository does not define; check Settings → Environments rather than
+assuming it does.
+
+None of the `scripts/` checks touch `web/`, and the Pages build does not touch
+the catalog. If you change `web/`, build it yourself; `validate.py` passing says
+nothing about it.
 
 Local install test from inside Claude Code:
 
