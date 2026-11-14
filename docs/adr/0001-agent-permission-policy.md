@@ -64,23 +64,31 @@ Revisit if this repository ever gains a deployment or publishing step.
 
 **What this buys.** The four highest-signal footguns are refused without a
 prompt, in every permission mode, for every agent session in this repository.
-Five of the six ECC findings stop recurring. The repository gains its first
-ADR, and with it a place to record this class of decision.
+Four of the six ECC findings stop recurring (the `rm -rf`, `sudo`, `chmod 777`
+and `ssh` denies). The other two stay open by decision, below. The repository
+gains its first ADR, and with it a place to record this class of decision.
 
-**What it does not buy, stated plainly.** Permission rules are **prefix
-matches**, not a sandbox. `Bash(rm -rf *)` refuses `rm -rf build/`, but not
-`cd build && rm -rf .`, not `find . -delete`, and not a script that contains the
-command. This is a guardrail against an obvious slip, not a security boundary,
-and must not be cited as one. Real isolation is the container the session runs
-in.
+**What it does not buy, stated plainly.** A Bash rule matches the invocation
+Claude usually produces; it does not match the same program in a different
+form. Claude Code checks each subcommand of a compound command against deny
+rules, so `Bash(rm -rf *)` refuses `rm -rf build/` and also
+`cd build && rm -rf .`. It does not refuse `/bin/rm -rf build/`, `bash -c 'rm
+-rf build/'`, `find . -delete`, or a script that contains the command. This is
+a guardrail against an obvious slip, not a security boundary, and must not be
+cited as one. Real isolation is the container the session runs in. Claude Code's
+permissions documentation makes the same point.
 
-**Cost.** A legitimate `rm -rf` on a build directory now needs a different
-spelling or an explicit allow rule. In a catalog repository with no build
-artifacts outside `web/node_modules`, that cost is close to zero.
+**Cost.** A legitimate `rm -rf` on a build directory is now refused. Deny rules
+are evaluated before allow rules, so an allow rule cannot carve out an
+exception; permitting it means narrowing or removing the deny rule. In a
+catalog repository with no build artifacts outside `web/node_modules`, that
+cost is close to zero.
 
-**The medium finding stays open by choice.** ECC will keep reporting "No
-PreToolUse security hooks" on every commit. That is now a recorded decision
-rather than an unread finding; this ADR is the answer to it.
+**Two findings stay open by choice.** ECC will keep reporting "No PreToolUse
+security hooks" (medium) and "Missing deny: `> /dev/`" (low) on every commit.
+Both are now recorded decisions rather than unread findings; this ADR is the
+answer to them. Observed on the audit of commit `2bd6073`: exactly these two
+remain.
 
 ## Alternatives considered
 
@@ -99,5 +107,6 @@ unwanted in a catalog repository whether or not a scanner asks for it.
 - This repository gains a deployment, publish or release-automation step.
 - A deny rule is bypassed in practice rather than respected — the signal that
   the rule is wrong, not that the contributor is.
-- Claude Code's permission syntax gains matching that is not prefix-based, at
-  which point the "not a security boundary" caveat above may need revising.
+- Claude Code's Bash matching starts to cover other invocation forms (absolute
+  paths, `bash -c` wrappers), at which point the "not a security boundary"
+  caveat above may need revising.
