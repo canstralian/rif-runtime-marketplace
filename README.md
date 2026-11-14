@@ -28,7 +28,8 @@ The repository follows Anthropic's marketplace structure:
 ├── docs/
 │   ├── PROMPT-IR.md
 │   ├── SKILL-CONTRACT.md
-│   └── SKILL-MAPPING.md
+│   ├── SKILL-MAPPING.md
+│   └── spec-kit/
 ├── schemas/
 │   ├── prompt-ir.schema.json
 │   └── prompt-build.schema.json
@@ -94,6 +95,7 @@ The repository carries the contracts the plugin's skills are bound to:
 |---|---|
 | [`docs/SKILL-CONTRACT.md`](docs/SKILL-CONTRACT.md) | The boundary between a marketplace skill and the RIF Runtime. |
 | [`docs/SKILL-MAPPING.md`](docs/SKILL-MAPPING.md) | Which capability each skill owns, and what it must not own. |
+| [`docs/spec-kit/`](docs/spec-kit/README.md) | A security profile for skill specifications, a template that meets it, and a self-assessment of the current skills. |
 | [`docs/PROMPT-IR.md`](docs/PROMPT-IR.md) | PromptIR: the layered, provenance-carrying IR the runtime compiles before invoking a model, and the `PromptBuild` audit artifact. |
 
 PromptIR treats a prompt as a compilation target rather than a string: instruction
